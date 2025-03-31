@@ -14,6 +14,6 @@ This repository contains the source code and documentation for the **Payroll Man
 
 - Django (Python web framework)
 - MySQL (Relational Database Management System)
-- Django (Python web framework)
 - Other required dependencies as listed in `requirements.txt`
+-pip install -r requirements.txt
 

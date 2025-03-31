@@ -24,6 +24,7 @@ SECRET_KEY = 'django-insecure-6t6p^g2#%y4na_wp@z!t8lzbb!cs1pg31c2%jhz)kf)hcc8nl5
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+LOGIN_URL = '/accounts/login/'  # Redirect to login page if not authenticated
 
 ALLOWED_HOSTS = []
 
@@ -33,6 +34,8 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'accounts',
     'employee',
+    'payroll',
+    'hr',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -83,7 +86,7 @@ DATABASES = {
         'NAME': 'payroll_db',  
         'USER': 'root',  
         'PASSWORD': 'Admin',  # Your MySQL password
-        'HOST': 'localhost',  # Keep as 'localhost' if MySQL is running locally
+        'HOST': 'localhost',  
         'PORT': '3306',  # Default MySQL port
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -116,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'IST'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 

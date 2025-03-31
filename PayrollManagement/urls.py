@@ -17,13 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from accounts import views
-
+from payroll.models import Employee  # Import Employee model
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),  # Authentication
-    path('', views.login_view, name='login'),  
-
-
-    # path('employees/', include('employees.urls')),  # Employee features
+    path('', views.login_view, name='login'),  # Redirect to login page
+    path('employee/', include('employee.urls')),  # Employee features
+    path('hr/', include('hr.urls')),  # HR/Admin features
     # path('hr/', include('hr.urls')),  # HR/Admin features
 ]
