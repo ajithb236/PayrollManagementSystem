@@ -1,6 +1,81 @@
-{% if setup_needed %}
-    <h2>Contact Admin to Get Your Dashboard Setup</h2>
-{% else %}
-    <h2>Welcome to Your Dashboard!</h2>
-    <!-- Add employee dashboard content here -->
-{% endif %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if setup_needed %}
+    <div class="alert alert-warning text-center mt-5">
+        <h4>Contact Admin</h4>
+        <p>Your department and job role have not been assigned yet. Please contact the admin.</p>
+    </div>
+    {% else %}
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3">Employee Menu</h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-dollar"></i> View Salary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-gift"></i> View Bonus
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-percent"></i> Tax Deductions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Request Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Track Leave Balance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h1 class="text-center">Welcome, {{ employee.name }}!</h1>
+                    <p class="text-center">Today is {{ employee.current_date }}.</p>
+                    <p class="text-center">Current Time: {{ employee.current_time }}</p>
+                    <hr>
+                    <h4>Department: {{ employee.department_name }}</h4>
+                    <h4>Job Role: {{ employee.job_title }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+{% endblock %}

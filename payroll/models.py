@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-
+from datetime import datetime
 
 
 # Create your models here.
@@ -26,6 +26,10 @@ class Employee(models.Model):
     job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)  # Can be NULL until HR assigns it
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)  # Can be NULL
     email = models.EmailField(max_length=255,default='user@user.com')  # Added email field
+    address = models.TextField(null=True, blank=True)  # Add address field
+    gender = models.CharField(max_length=10, null=True, blank=True)  # Add gender field
+    date_of_birth = models.DateField(null=True, blank=True)  # Add date of birth field
+    date_joined = models.DateField(default=datetime.now)  # Date of joining
     def __str__(self):
         return f"{self.name} ({self.user.username})"
 
@@ -43,11 +47,12 @@ class Payroll(models.Model):
     allowances = models.DecimalField(max_digits=10, decimal_places=2)
 
 class Attendance(models.Model):
-    attendance_id = models.AutoField(primary_key=True)
+    attendance_id = models.AutoField(primary_key=True)  # Explicit primary key
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    hours_worked = models.DecimalField(max_digits=5, decimal_places=2)
-    shift_type = models.CharField(max_length=50)
-    leave_status = models.CharField(max_length=50)
+    date = models.DateField(default=datetime.now)
+    hours_worked = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    leave_status = models.CharField(max_length=20, default='Present')
 
 class Leave(models.Model):
     leave_id = models.AutoField(primary_key=True)

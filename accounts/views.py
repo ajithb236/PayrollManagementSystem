@@ -6,7 +6,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-
+from datetime import datetime
+from django.contrib import messages
 class CustomUserCreationForm(UserCreationForm):
     ROLE_CHOICES = [('Employee', 'Employee'), ('HR', 'HR')] #2 different types of users.
     role = forms.ChoiceField(choices=ROLE_CHOICES)
@@ -29,8 +30,8 @@ def register_view(request):
             with connection.cursor() as cursor:
                 # Insert into Employee table
                 cursor.execute(
-                    "INSERT INTO payroll_Employee (user_id, name, contact,email) VALUES (%s, %s, %s, %s)",
-                    [user.id, name, contact,email_id]
+                    "INSERT INTO payroll_Employee (user_id, name, contact,email,date_joined) VALUES (%s, %s, %s, %s,%s)",
+                    [user.id, name, contact,email_id,datetime.now()]
                 )
                 
                 # Get employee ID
@@ -69,11 +70,12 @@ def register_view(request):
                         "UPDATE payroll_Employee SET department_id = %s WHERE employee_id = %s",
                         [department_id, employee_id]
                     )
-
+            messages.success(request, 'Registered Successfully! You can now log in.')
             login(request, user)
             return redirect('login')
 
     else:
+        messages.error(request, 'Registration Failed! Please try again.')
         form = CustomUserCreationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
@@ -101,4 +103,5 @@ def login_view(request):
 def logout_view(request):
     from django.contrib.auth import logout
     logout(request)
+    messages.success(request, "Logged out successfully.")
     return redirect("login")

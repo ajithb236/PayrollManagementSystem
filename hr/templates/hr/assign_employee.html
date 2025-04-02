@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Manage Employees</h1>
+    <p class="text-center">Assign departments and job roles to employees.</p>
+
+    <table class="table table-bordered mt-4">
+        <thead>
+            <tr>
+                <th>Employee Name</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Assign Department</th>
+                <th>Assign Job Role</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.1 }}</td> <!-- Employee Name -->
+                <td>{{ employee.2 }}</td> <!-- Contact -->
+                <td>{{ employee.3 }}</td> <!-- Email -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <td>
+                        <select name="department_id" class="form-select" required>
+                            <option value="" disabled selected>Select Department</option>
+                            {% for department in departments %}
+                            <option value="{{ department.0 }}">{{ department.1 }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select name="job_id" class="form-select" required>
+                            <option value="" disabled selected>Select Job Role</option>
+                            {% for job in jobs %}
+                            <option value="{{ job.0 }}">{{ job.1 }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="hidden" name="employee_id" value="{{ employee.0 }}"> <!-- Employee ID -->
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </td>
+                </form>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if not employees %}
+    <p class="text-center text-muted">No employees need assignment.</p>
+    {% endif %}
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load widget_tweaks %}
 {% block content %}
 <div class="container d-flex justify-content-center align-items-center vh-100">
     <div class="col-md-6">
@@ -8,7 +8,7 @@
             
             {% if form.errors %}
                 <div class="alert alert-danger">
-                    <ul>
+                    <ul class="mb-0">
                         {% for field, errors in form.errors.items %}
                             {% for error in errors %}
                                 <li>{{ error }}</li>
@@ -18,62 +18,71 @@
                 </div>
             {% endif %}
             
-            <form method="POST">
+            <form method="POST" class="needs-validation" novalidate>
                 {% csrf_token %}
                 
+                <!-- Name -->
                 <div class="mb-3">
-                    <label for="id_name" class="form-label">Name:</label>
-                    <input type="text" id="id_name" name="name" class="form-control" value="{{ request.POST.name }}" required>
+                    <label for="id_name" class="form-label fw-bold">Name:</label>
+                    <input type="text" id="id_name" name="name" class="form-control rounded-pill" value="{{ request.POST.name }}" placeholder="Enter your full name" required>
                 </div>
 
+                <!-- Contact Number -->
                 <div class="mb-3">
-                    <label for="id_contact" class="form-label">Contact Number:</label>
-                    <input type="tel" id="id_contact" name="contact" class="form-control" value="{{ request.POST.contact }}" required>
+                    <label for="id_contact" class="form-label fw-bold">Contact Number:</label>
+                    <input type="tel" id="id_contact" name="contact" class="form-control rounded-pill" value="{{ request.POST.contact }}" placeholder="Enter your contact number" required>
                 </div>
 
+                <!-- Username -->
                 <div class="mb-3">
-                    {{ form.username.label_tag }}
-                    {{ form.username }}
+                    <label for="id_username" class="form-label fw-bold">Username:</label>
+                    {{ form.username|add_class:"form-control rounded-pill" }}
                     {% if form.username.errors %}
-                        <div class="text-danger">{{ form.username.errors.0 }}</div>
+                        <div class="text-danger small">{{ form.username.errors.0 }}</div>
                     {% endif %}
                 </div>
 
+                <!-- Email ID -->
                 <div class="mb-3">
-                    <label for="id_email_id" class="form-label">Email ID:</label>
-                    <input type="email" id="id_email_id" name="email_id" class="form-control" value="{{ request.POST.email_id }}" required>
+                    <label for="id_email_id" class="form-label fw-bold">Email ID:</label>
+                    <input type="email" id="id_email_id" name="email_id" class="form-control rounded-pill" value="{{ request.POST.email_id }}" placeholder="Enter your email address" required>
                 </div>
+
+                <!-- Password -->
                 <div class="mb-3">
-                    {{ form.password1.label_tag }}
-                    {{ form.password1 }}
+                    <label for="id_password1" class="form-label fw-bold">Password:</label>
+                    {{ form.password1|add_class:"form-control rounded-pill" }}
                     {% if form.password1.errors %}
-                        <div class="text-danger">{{ form.password1.errors.0 }}</div>
+                        <div class="text-danger small">{{ form.password1.errors.0 }}</div>
                     {% endif %}
                 </div>
 
+                <!-- Confirm Password -->
                 <div class="mb-3">
-                    {{ form.password2.label_tag }}
-                    {{ form.password2 }}
+                    <label for="id_password2" class="form-label fw-bold">Confirm Password:</label>
+                    {{ form.password2|add_class:"form-control rounded-pill" }}
                     {% if form.password2.errors %}
-                        <div class="text-danger">{{ form.password2.errors.0 }}</div>
+                        <div class="text-danger small">{{ form.password2.errors.0 }}</div>
                     {% endif %}
                 </div>
 
+                <!-- Role -->
                 <div class="mb-3">
-                    <label for="id_role" class="form-label">Role:</label>
-                    <select name="role" id="id_role" class="form-select">
+                    <label for="id_role" class="form-label fw-bold">Role:</label>
+                    <select name="role" id="id_role" class="form-select rounded-pill">
                         <option value="Employee" {% if request.POST.role == "Employee" %}selected{% endif %}>Employee</option>
                         <option value="HR" {% if request.POST.role == "HR" %}selected{% endif %}>HR</option>
                     </select>
                 </div>
 
+                <!-- Submit Button -->
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">Register</button>
+                    <button type="submit" class="btn btn-primary rounded-pill">Register</button>
                 </div>
             </form>
 
             <p class="mt-3 text-center">
-                Already have an account? <a href="{% url 'login' %}">Login here</a>
+                Already have an account? <a href="{% url 'login' %}" class="text-decoration-none">Login here</a>
             </p>
         </div>
     </div>

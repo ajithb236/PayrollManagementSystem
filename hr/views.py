@@ -6,6 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.shortcuts import get_object_or_404
 from payroll.models import Job  # Import Job from Payroll app
+from django.contrib.auth.decorators import login_required
+from django.db import connection
+from django.contrib import messages
 @login_required
 def hr_dashboard(request):
     if not request.user.is_authenticated or request.user.role != 'HR':
@@ -32,5 +35,48 @@ def generate_reports(request):
 
 @login_required
 def manage_employee(request):
-    # Logic to manage employees
-    return render(request, 'hr/manage_employees.html')
+    return render(request, 'hr/manage_employee.html')
+
+@login_required
+def assign_employee(request):
+    # Ensure only HR users can access this page
+    if not request.user.is_authenticated or request.user.role != 'HR':
+        return redirect('login')
+
+    # Fetch employees with NULL department and job using raw SQL
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT e.employee_id, e.name, e.contact, e.email
+            FROM payroll_employee e
+            WHERE e.department_id IS NULL AND e.job_id IS NULL
+        """)
+        employees = cursor.fetchall()
+
+    # Fetch all departments and jobs for the dropdown options
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT department_id, department_name FROM payroll_department")
+        departments = cursor.fetchall()
+
+        cursor.execute("SELECT job_id, job_title FROM payroll_job")
+        jobs = cursor.fetchall()
+
+    if request.method == 'POST':
+        employee_id = request.POST.get('employee_id')
+        department_id = request.POST.get('department_id')
+        job_id = request.POST.get('job_id')
+
+        # Update the employee's department and job using raw SQL
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE payroll_employee
+                SET department_id = %s, job_id = %s
+                WHERE employee_id = %s
+            """, [department_id, job_id, employee_id])
+        messages.success(request, 'Employee assigned successfully!')
+        return redirect('assign_employee')
+
+    return render(request, 'hr/assign_employee.html', {
+        'employees': employees,
+        'departments': departments,
+        'jobs': jobs
+    })
