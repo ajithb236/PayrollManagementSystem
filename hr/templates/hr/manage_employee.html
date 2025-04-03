@@ -1,2 +1,130 @@
-<!DOCTYPE html>
-<t>Will Be Updated</t>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-center">Manage Employees</h1>
+        <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Go to Dashboard
+        </a>
+    </div>
+
+    <!-- Form to Select Department -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5>Select Department</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="view_employees">
+                <div class="row">
+                    <div class="col-md-10">
+                        <label for="department_id" class="form-label">Department</label>
+                        <select class="form-select" id="department_id" name="department_id" required>
+                            <option value="">-- Select Department --</option>
+                            {% for department in departments %}
+                            <option value="{{ department.0 }}" {% if selected_department == department.0|stringformat:"s" %}selected{% endif %}>
+                                {{ department.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">View Employees</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employees Table -->
+    {% if employees %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h5>Employees in Selected Department</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Email</th>
+                        <th>Job Title</th>
+                        <th>Bonus</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.1 }}</td>
+                        <td>{{ employee.2 }}</td>
+                        <td>{{ employee.3 }}</td>
+                        <td>{{ employee.4 }}</td>
+                        <td>{{ employee.6 }}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editEmployeeModal{{ employee.0 }}">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Edit Employee Modal -->
+                    <div class="modal fade" id="editEmployeeModal{{ employee.0 }}" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_employee">
+                                    <input type="hidden" name="employee_id" value="{{ employee.0 }}">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editEmployeeModalLabel">Edit Employee</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="new_department_id" class="form-label">New Department</label>
+                                            <select class="form-select" id="new_department_id" name="new_department_id">
+                                                <option value="">-- Select Department --</option>
+                                                {% for department in departments %}
+                                                <option value="{{ department.0 }}">{{ department.1 }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="new_job_id" class="form-label">New Job</label>
+                                            <select class="form-select" id="new_job_id" name="new_job_id">
+                                                <option value="">-- Select Job --</option>
+                                                {% for job in jobs %}
+                                                <option value="{{ job.0 }}">{{ job.1 }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="bonus" class="form-label">Bonus</label>
+                                            <input type="number" class="form-control" id="bonus" name="bonus" placeholder="Enter bonus amount">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-success">Save Changes</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-center mt-5 text-muted">No employees found in the selected department.</p>
+    {% endif %}
+</div>
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

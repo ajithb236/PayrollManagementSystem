@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Clock Overtime Hours</h1>
+    <form method="POST" class="mt-4">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="overtime_hours" class="form-label">Overtime Hours</label>
+            <input type="number" class="form-control" id="overtime_hours" name="overtime_hours" placeholder="Enter overtime hours" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    <div class="text-center mt-4">
+        <a href="{% url 'employee_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

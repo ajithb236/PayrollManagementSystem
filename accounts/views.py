@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 from datetime import datetime
 from django.contrib import messages
+from payroll.models import Payroll,Employee,Bonus,Deduction
 class CustomUserCreationForm(UserCreationForm):
     ROLE_CHOICES = [('Employee', 'Employee'), ('HR', 'HR')] #2 different types of users.
     role = forms.ChoiceField(choices=ROLE_CHOICES)
@@ -37,10 +38,23 @@ def register_view(request):
                 # Get employee ID
                 cursor.execute("SELECT employee_id FROM payroll_Employee WHERE user_id = %s", [user.id])
                 employee_id = cursor.fetchone()[0]
-
+                payroll = Payroll.objects.create(
+                    employee_id=employee_id,
+                    allowances=0  # Default allowances can be set to 0 or any other value
+                )
+                payroll_id = payroll.payroll_id
+                Bonus.objects.create(
+                    Payroll_id = payroll_id,
+                    bonus_amount = 0
+                )
+                Deduction.objects.create(
+                    payroll_id = payroll_id,
+                    tax_amount = 0,
+                    other_deductions = 0
+                )
                 # Assign HR role if selected
                 if role_name == "HR":
-                    print("HRR")
+                    
                     cursor.execute("SELECT role_id FROM payroll_Role WHERE role_name = 'HR'")
                     hr_role = cursor.fetchone()
                     if not hr_role:

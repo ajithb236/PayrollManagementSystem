@@ -1,75 +1,65 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="text-center">Welcome, {{ request.user.username }}!</h1>
-    <p class="text-center">What would you like to do today?</p>
-
-    <div class="row mt-4">
-        <!-- Assign Job Roles and Departments -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Assign Job Roles</h5>
-                    <p class="card-text">Assign job roles and departments to employees.</p>
-                    <a href="{% url 'assign_employee' %}" class="btn btn-primary">Go</a>
-                </div>
-            </div>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3">HR Menu</h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-plus"></i> Assign Job Roles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'update_payscales' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-exchange"></i> Update Pay Scales
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-people"></i> Manage Employees
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'generate_reports' %}" class="nav-link text-dark">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Generate Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Approve Leave Requests
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Track Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <!-- Update Pay Scales -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Update Pay Scales</h5>
-                    <p class="card-text">Update salary ranges for job roles.</p>
-                    <a href="{% url 'manage_employee' %}" class="btn btn-primary">Go</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Approve Leave Requests -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Approve Leave Requests</h5>
-                    <p class="card-text">View and approve pending leave requests.</p>
-                    <a href="{% url 'manage_employee' %}" class="btn btn-primary">Go</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <!-- Track Attendance -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Track Attendance</h5>
-                    <p class="card-text">View and manage employee attendance records.</p>
-                    <a href="{% url 'manage_employee' %}" class="btn btn-primary">Go</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Generate Reports -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Generate Reports</h5>
-                    <p class="card-text">Generate payroll, attendance, and tax reports.</p>
-                    <a href="{% url 'manage_employee' %}" class="btn btn-primary">Go</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Manage Employees -->
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Manage Employees</h5>
-                    <p class="card-text">Add, edit, or delete employee records.</p>
-                    <a href="{% url 'assign_employee' %}" class="btn btn-primary">Go</a>
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h1 class="text-center">Welcome, {{ request.user.username }}!</h1>
+                    <p class="text-center">What would you like to do today?</p>
+                    <hr>
+                    <h4>HR Dashboard</h4>
+                    <p>Use the menu on the left to manage employees, assign roles, update pay scales, and more.</p>
                 </div>
             </div>
         </div>
@@ -78,4 +68,6 @@
 
 <!-- Bootstrap CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 {% endblock %}

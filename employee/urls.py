@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import employee_dashboard
-from .views import error_page
-from .views import logout
-from .views import profile
+from . import views
+
 urlpatterns = [
-    path("dashboard/", employee_dashboard, name="employee_dashboard"),
-    path('error/', error_page, name='error_page'),  # Make sure this exists
-    path('logout/',logout,name='logout'),# Logout URL
-    path('profile/', profile, name='profile'),  # Profile URL
+    path("dashboard/", views.employee_dashboard, name="employee_dashboard"),
+    path('error/', views.error_page, name='error_page'),  # Make sure this exists
+    path('logout/',views.logout,name='logout'),# Logout URL
+    path('profile/', views.profile, name='profile'),  # Profile URL
+    path('salary/', views.view_salary, name='salary'),  # Salary URL
+    path('attendance/', views.attendance_tracker, name='attendance'),  # Attendance URL
+    path("clock_overtime/", views.clock_overtime, name="clock_overtime"),  # Clock Overtime URL
 ]

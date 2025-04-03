@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Attendance Tracker</h1>
+    <div class="card mt-4">
+        <div class="card-body">
+            {% if attendance %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Hours Worked</th>
+                        <th>Overtime Hours</th>
+                        <th>Leave Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.hours_worked }}</td>
+                        <td>{{ record.overtime_hours }}</td>
+                        <td>{{ record.leave_status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center text-muted">No attendance records found.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="text-center mt-4">
+        <a href="{% url 'employee_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

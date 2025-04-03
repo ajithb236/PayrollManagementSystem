@@ -15,8 +15,8 @@
             <hr>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
-                        <i class="bi bi-currency-dollar"></i> View Salary
+                    <a href="{% url 'salary' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-rupee"></i> View Salary
                     </a>
                 </li>
                 <li class="nav-item">
@@ -40,8 +40,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                    <a href="{% url 'attendance' %}" class="nav-link text-dark">
                         <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'clock_overtime' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Clock Overtime Hours
                     </a>
                 </li>
                 <li class="nav-item">
