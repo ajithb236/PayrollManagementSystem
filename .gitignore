@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Django specific
+db.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.sqlite3
+*.env
+
+# Environment variables
+.env
+*.env
+
+# Django migrations
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Media and static files
+/media/
+/staticfiles/
+/static/
+
+# IDE specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python virtual environment
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# MySQL dumps or sensitive files
+*.sql
+*.dump
+
+# Compiled files
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Test output
+*.pytest_cache/
+.tox/
+.pytest_cache/
