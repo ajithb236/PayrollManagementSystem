@@ -31,11 +31,11 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4 fw-bold">Date of Birth:</div>
-                    <div class="col-md-8">{{ employee.date_of_birth|date:'Y-m-d' }}</div>
+                    <div class="col-md-8">{{ employee.date_of_birth|date:'d-m-Y' }}</div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4 fw-bold">Date Joined:</div>
-                    <div class="col-md-8">{{ employee.date_joined|date:'Y-m-d' }}</div>
+                    <div class="col-md-8">{{ employee.date_joined|date:'d-m-Y' }}</div>
                 </div>
                 <div class="text-center">
                     <button class="btn btn-primary" id="edit-profile-btn">

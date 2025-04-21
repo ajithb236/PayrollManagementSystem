@@ -103,7 +103,7 @@ def assign_employee(request):
 
     # Fetch all departments and jobs for the dropdown options
     with connection.cursor() as cursor:
-        cursor.execute("SELECT department_id, department_name FROM payroll_department")
+        cursor.execute("SELECT department_id, department_name FROM payroll_department where department_name != 'HR'")
         departments = cursor.fetchall()
 
         cursor.execute("SELECT job_id, job_title FROM payroll_job")

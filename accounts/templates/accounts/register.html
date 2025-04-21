@@ -24,19 +24,19 @@
                 <!-- Name -->
                 <div class="mb-3">
                     <label for="id_name" class="form-label fw-bold">Name:</label>
-                    <input type="text" id="id_name" name="name" class="form-control rounded-pill" value="{{ request.POST.name }}" placeholder="Enter your full name" required>
+                    <input type="text" id="id_name" name="name" class="form-control rounded-pill" value="{{ form.name.value|default:'' }}" placeholder="Enter your full name" required>
                 </div>
 
                 <!-- Contact Number -->
                 <div class="mb-3">
                     <label for="id_contact" class="form-label fw-bold">Contact Number:</label>
-                    <input type="tel" id="id_contact" name="contact" class="form-control rounded-pill" value="{{ request.POST.contact }}" placeholder="Enter your contact number" required>
+                    <input type="tel" id="id_contact" name="contact" class="form-control rounded-pill" value="{{ form.contact.value|default:'' }}" placeholder="Enter your contact number" required>
                 </div>
 
                 <!-- Username -->
                 <div class="mb-3">
                     <label for="id_username" class="form-label fw-bold">Username:</label>
-                    {{ form.username|add_class:"form-control rounded-pill" }}
+                    {{ form.username|add_class:"form-control rounded-pill"|attr:"placeholder:Choose a unique username" }}
                     {% if form.username.errors %}
                         <div class="text-danger small">{{ form.username.errors.0 }}</div>
                     {% endif %}
@@ -44,14 +44,14 @@
 
                 <!-- Email ID -->
                 <div class="mb-3">
-                    <label for="id_email_id" class="form-label fw-bold">Email ID:</label>
-                    <input type="email" id="id_email_id" name="email_id" class="form-control rounded-pill" value="{{ request.POST.email_id }}" placeholder="Enter your email address" required>
+                    <label for="id_email" class="form-label fw-bold">Email ID:</label>
+                    <input type="email" id="id_email" name="email" class="form-control rounded-pill" value="{{ form.email.value|default:'' }}" placeholder="Enter your email address" required>
                 </div>
 
                 <!-- Password -->
                 <div class="mb-3">
                     <label for="id_password1" class="form-label fw-bold">Password:</label>
-                    {{ form.password1|add_class:"form-control rounded-pill" }}
+                    {{ form.password1|add_class:"form-control rounded-pill"|attr:"placeholder:Create a strong password" }}
                     {% if form.password1.errors %}
                         <div class="text-danger small">{{ form.password1.errors.0 }}</div>
                     {% endif %}
@@ -60,7 +60,7 @@
                 <!-- Confirm Password -->
                 <div class="mb-3">
                     <label for="id_password2" class="form-label fw-bold">Confirm Password:</label>
-                    {{ form.password2|add_class:"form-control rounded-pill" }}
+                    {{ form.password2|add_class:"form-control rounded-pill"|attr:"placeholder:Confirm your password" }}
                     {% if form.password2.errors %}
                         <div class="text-danger small">{{ form.password2.errors.0 }}</div>
                     {% endif %}
@@ -70,8 +70,8 @@
                 <div class="mb-3">
                     <label for="id_role" class="form-label fw-bold">Role:</label>
                     <select name="role" id="id_role" class="form-select rounded-pill">
-                        <option value="Employee" {% if request.POST.role == "Employee" %}selected{% endif %}>Employee</option>
-                        <option value="HR" {% if request.POST.role == "HR" %}selected{% endif %}>HR</option>
+                        <option value="Employee" {% if form.role.value == "Employee" %}selected{% endif %}>Employee</option>
+                        <option value="HR" {% if form.role.value == "HR" %}selected{% endif %}>HR</option>
                     </select>
                 </div>
 

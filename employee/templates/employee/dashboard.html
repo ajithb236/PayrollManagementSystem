@@ -6,6 +6,7 @@
     <div class="alert alert-warning text-center mt-5">
         <h4>Contact Admin</h4>
         <p>Your department and job role have not been assigned yet. Please contact the admin.</p>
+        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
     </div>
     {% else %}
     <div class="row">

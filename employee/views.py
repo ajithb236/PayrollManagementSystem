@@ -31,11 +31,17 @@ def employee_dashboard(request):
         employee = cursor.fetchone()
 
     # Check if any required fields are missing
+    
+    if not employee[7] or not employee[8]:
+        # Add a message to inform the user
+        messages.error(request, "Contact HR to assign a job and department.")
+        return render(request, 'employee/dashboard.html', {'setup_needed': True})  # Show setup needed message
     if not employee or not employee[2] or not employee[4] or not employee[5] or not employee[6]:
         # Add a message to inform the user
         messages.error(request, "You must update your profile details to access the dashboard.")
         return redirect('profile')  # Redirect to the profile page
-
+    else:
+        pass
     # Automatically mark attendance
     today = datetime.now().date()
     with connection.cursor() as cursor:
@@ -70,34 +76,6 @@ def employee_dashboard(request):
         'current_time': datetime.now().strftime('%I:%M %p')
     }
     return render(request, 'employee/dashboard.html', {'setup_needed': False, 'employee': employee_data})
-@login_required
-def view_salary(request):
-    # Fetch employee salary details
-    user_id = request.user.id
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT e.employee_id, e.name, p.allowances, j.salary_range
-            FROM payroll_employee e
-            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
-            LEFT JOIN payroll_jobsalaryrange j ON e.job_id = j.job_id
-            WHERE e.user_id = %s
-            """, [user_id]
-        )
-        salary_details = cursor.fetchone()
-
-    if not salary_details:
-        messages.error(request, "Salary details not found.")
-        return redirect('employee_dashboard')
-
-    # Prepare salary data for the template
-    salary_data = {
-        'employee_id': salary_details[0],
-        'name': salary_details[1],
-        'allowances': salary_details[2],
-        'salary_range': salary_details[3]
-    }
-    return render(request, 'employee/salary.html', {'salary': salary_data})
 
 
 @login_required
@@ -218,7 +196,284 @@ def clock_overtime(request):
         messages.success(request, f"Overtime hours updated to {overtime_hours} for today.")
         return redirect('employee_dashboard')
     return render(request, 'employee/clock_overtime.html')
+@login_required
+def view_salary(request):
+    user_id = request.user.id
+    
+    # Get current month and year for filtering
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    with connection.cursor() as cursor:
+        # Fetch employee basic details and base salary
+        cursor.execute(
+            """
+            SELECT e.employee_id, e.name, j.job_title, jsr.salary_range, p.payroll_id, p.allowances
+            FROM payroll_employee e
+            LEFT JOIN payroll_job j ON e.job_id = j.job_id
+            LEFT JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
+            WHERE e.user_id = %s
+            """, [user_id]
+        )
+        employee_basic = cursor.fetchone()
+        
+        if not employee_basic:
+            messages.error(request, "Salary details not found. Please contact HR.")
+            return redirect('employee_dashboard')
+        
+        employee_id = employee_basic[0]
+        payroll_id = employee_basic[4]
+        base_salary = float(employee_basic[3]) if employee_basic[3] else 0
+        
+        # Fetch deductions
+        cursor.execute(
+            """
+            SELECT tax_amount, other_deductions
+            FROM payroll_deduction
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        deductions = cursor.fetchone()
+        tax_amount = float(deductions[0]) if deductions and deductions[0] else 0
+        other_deductions = float(deductions[1]) if deductions and deductions[1] else 0
+        
+        # Fetch bonus
+        cursor.execute(
+            """
+            SELECT bonus_amount
+            FROM payroll_bonus
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        bonus_record = cursor.fetchone()
+        bonus_amount = float(bonus_record[0]) if bonus_record else 0
+        
+        # Calculate overtime pay (for current month)
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND MONTH(date) = %s AND YEAR(date) = %s
+            """, [employee_id, current_month, current_year]
+        )
+        overtime_result = cursor.fetchone()
+        overtime_hours = float(overtime_result[0]) if overtime_result and overtime_result[0] else 0
+        
+        # Calculate hourly rate (assuming 160 working hours per month)
+        hourly_rate = base_salary / 160
+        overtime_pay = overtime_hours * hourly_rate * 2  # Double rate for overtime
+        
+        # Calculate allowances breakdown (typical Indian structure)
+        total_allowances = float(employee_basic[5]) if employee_basic[5] else 0
+        
+        # Calculate standard components
+        hra = base_salary * 0.40  # 40% of base salary
+        da = base_salary * 0.10    # 10% of base salary
+        ta = 3200  # Standard transport allowance
+        special_allowance = total_allowances - (hra + da + ta)
+        special_allowance = max(0, special_allowance)  # Ensure it's not negative
+        
+        # Calculate EPF (12% of basic salary)
+        epf = base_salary * 0.12
+        
+        # Professional Tax
+        prof_tax = 200
+        
+        # Calculate gross and net salary
+        gross_salary = base_salary + total_allowances + bonus_amount + overtime_pay
+        total_deductions = tax_amount + other_deductions + epf + prof_tax
+        net_salary = gross_salary - total_deductions
+        
+        # Year to date calculations
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND YEAR(date) = %s
+            """, [employee_id, current_year]
+        )
+        ytd_overtime_result = cursor.fetchone()
+        ytd_overtime = float(ytd_overtime_result[0]) if ytd_overtime_result and ytd_overtime_result[0] else 0
+        ytd_overtime_pay = ytd_overtime * hourly_rate * 2
+        
+        ytd_gross = (base_salary + total_allowances) * current_month + bonus_amount + ytd_overtime_pay
+        ytd_deductions = total_deductions * current_month
+        ytd_net = ytd_gross - ytd_deductions
 
+    salary_data = {
+        'employee_name': employee_basic[1],
+        'job_title': employee_basic[2],
+        'month': datetime.now().strftime('%B %Y'),
+        'base_salary': round(base_salary, 2),
+        'allowances': {
+            'hra': round(hra, 2),
+            'da': round(da, 2),
+            'ta': round(ta, 2),
+            'special': round(special_allowance, 2),
+            'total': round(total_allowances, 2)
+        },
+        'overtime': {
+            'hours': overtime_hours,
+            'rate': round(hourly_rate * 2, 2),
+            'pay': round(overtime_pay, 2)
+        },
+        'bonus': round(bonus_amount, 2),
+        'deductions': {
+            'epf': round(epf, 2),
+            'tax': round(tax_amount, 2),
+            'prof_tax': prof_tax,
+            'other': round(other_deductions, 2),
+            'total': round(total_deductions + prof_tax, 2)  # Include prof_tax in total
+        },
+        'gross_salary': round(gross_salary, 2),
+        'net_salary': round(net_salary, 2),
+        'ytd': {
+            'gross': round(ytd_gross, 2),
+            'deductions': round(ytd_deductions, 2),
+            'net': round(ytd_net, 2)
+        }
+    }
+    
+    return render(request, 'employee/salary.html', {'salary': salary_data})
+@login_required
+def view_salary1(request):
+    user_id = request.user.id
+    
+    # Get current month and year for filtering
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    with connection.cursor() as cursor:
+        # Fetch employee basic details and base salary
+        cursor.execute(
+            """
+            SELECT e.employee_id, e.name, j.job_title, jsr.salary_range, p.payroll_id, p.allowances
+            FROM payroll_employee e
+            LEFT JOIN payroll_job j ON e.job_id = j.job_id
+            LEFT JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
+            WHERE e.user_id = %s
+            """, [user_id]
+        )
+        employee_basic = cursor.fetchone()
+        
+        if not employee_basic:
+            messages.error(request, "Salary details not found. Please contact HR.")
+            return redirect('employee_dashboard')
+        
+        employee_id = employee_basic[0]
+        payroll_id = employee_basic[4]
+        base_salary = float(employee_basic[3]) if employee_basic[3] else 0
+        
+        # Fetch deductions
+        cursor.execute(
+            """
+            SELECT tax_amount, other_deductions
+            FROM payroll_deduction
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        deductions = cursor.fetchone()
+        tax_amount = float(deductions[0]) if deductions and deductions[0] else 0
+        other_deductions = float(deductions[1]) if deductions and deductions[1] else 0
+        
+        # Fetch bonus
+        cursor.execute(
+            """
+            SELECT bonus_amount
+            FROM payroll_bonus
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        bonus_record = cursor.fetchone()
+        bonus_amount = float(bonus_record[0]) if bonus_record else 0
+        
+        # Calculate overtime pay (for current month)
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND MONTH(date) = %s AND YEAR(date) = %s
+            """, [employee_id, current_month, current_year]
+        )
+        overtime_hours = cursor.fetchone()[0] or 0
+        
+        # Calculate hourly rate (assuming 160 working hours per month)
+        hourly_rate = base_salary / 160
+        overtime_pay = float(overtime_hours) * hourly_rate * 2  # Double rate for overtime
+        
+        # Calculate allowances breakdown (typical Indian structure)
+        total_allowances = float(employee_basic[5]) if employee_basic[5] else 0
+        
+        # Calculate standard components
+        hra = base_salary * 0.40  # 40% of base salary
+        da = base_salary * 0.10    # 10% of base salary
+        ta = 3200  # Standard transport allowance
+        special_allowance = total_allowances - (hra + da + ta)
+        special_allowance = max(0, special_allowance)  # Ensure it's not negative
+        
+        # Calculate EPF (12% of basic salary)
+        epf = base_salary * 0.12
+        
+        # Calculate gross and net salary
+        gross_salary = base_salary + total_allowances + bonus_amount + overtime_pay
+        total_deductions = tax_amount + other_deductions + epf
+        net_salary = gross_salary - total_deductions
+        
+        # Year to date calculations
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND YEAR(date) = %s
+            """, [employee_id, current_year]
+        )
+        ytd_overtime = cursor.fetchone()[0] or 0
+        ytd_overtime_pay = float(ytd_overtime) * hourly_rate * 2
+        
+        ytd_gross = (base_salary + total_allowances) * current_month + bonus_amount + ytd_overtime_pay
+        ytd_deductions = total_deductions * current_month
+        ytd_net = ytd_gross - ytd_deductions
+
+    salary_data = {
+        'employee_name': employee_basic[1],
+        'job_title': employee_basic[2],
+        'month': datetime.now().strftime('%B %Y'),
+        'base_salary': round(base_salary, 2),
+        'allowances': {
+            'hra': round(hra, 2),
+            'da': round(da, 2),
+            'ta': round(ta, 2),
+            'special': round(special_allowance, 2),
+            'total': round(total_allowances, 2)
+        },
+        'overtime': {
+            'hours': overtime_hours,
+            'rate': round(hourly_rate * 2, 2),
+            'pay': round(overtime_pay, 2)
+        },
+        'bonus': round(bonus_amount, 2),
+        'deductions': {
+            'epf': round(epf, 2),
+            'tax': round(tax_amount, 2),
+            'other': round(other_deductions, 2),
+            'total': round(total_deductions, 2)
+        },
+        'gross_salary': round(gross_salary, 2),
+        'net_salary': round(net_salary, 2),
+        'ytd': {
+            'gross': round(ytd_gross, 2),
+            'deductions': round(ytd_deductions, 2),
+            'net': round(ytd_net, 2)
+        }
+    }
+    
+    return render(request, 'employee/salary.html', {'salary': salary_data})
 def error_page(request):
     return render(request, 'employee/error.html')  # Ensure you have an error.html template
 def logout(request):

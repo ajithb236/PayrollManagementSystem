@@ -10,89 +10,74 @@ from datetime import datetime
 from django.contrib import messages
 from payroll.models import Payroll,Employee,Bonus,Deduction
 class CustomUserCreationForm(UserCreationForm):
-    ROLE_CHOICES = [('Employee', 'Employee'), ('HR', 'HR')] #2 different types of users.
+    ROLE_CHOICES = [('Employee', 'Employee'), ('HR', 'HR')] 
     role = forms.ChoiceField(choices=ROLE_CHOICES)
+    name = forms.CharField(max_length=255, required=True)
+    contact = forms.CharField(max_length=20, required=True)
+    # Override the default email field to make it required
+    email = forms.EmailField(
+        max_length=255, 
+        required=True,
+        widget=forms.EmailInput(attrs={'placeholder': 'Enter your email address'})
+    )
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password1', 'password2', 'role']
+        fields = ['username', 'email', 'password1', 'password2', 'role', 'name', 'contact']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add placeholders to default fields
+        self.fields['username'].widget.attrs.update({'placeholder': 'Choose a unique username'})
+        self.fields['name'].widget.attrs.update({'placeholder': 'Enter your full name'})
+        self.fields['contact'].widget.attrs.update({'placeholder': 'Enter your contact number'})
+        self.fields['password1'].widget.attrs.update({'placeholder': 'Create a strong password'})
+        self.fields['password2'].widget.attrs.update({'placeholder': 'Confirm your password'})
+
 
 def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
-        name = request.POST.get('name','').strip()
-        contact = request.POST.get('contact','').strip()
-        role_name = request.POST.get('role','').strip() # "Employee" or "HR"
-        email_id = request.POST.get('email_id','').strip()
         if form.is_valid():
-            user = form.save()  
-            user.refresh_from_db()  # Update user instance
+            # Create the user with form.save() to properly handle password hashing
+            user = form.save()
             
+            # Extract form fields using cleaned_data (validated data)
+            name = form.cleaned_data.get('name', '')
+            contact = form.cleaned_data.get('contact', '')
+            email = form.cleaned_data.get('email', '')  # This is the correct field name now
+            
+            # Create the employee record using raw SQL
             with connection.cursor() as cursor:
-                # Insert into Employee table
+                # Create employee record - this will trigger the MySQL trigger
                 cursor.execute(
-                    "INSERT INTO payroll_Employee (user_id, name, contact,email,date_joined) VALUES (%s, %s, %s, %s,%s)",
-                    [user.id, name, contact,email_id,datetime.now()]
+                    """INSERT INTO payroll_Employee 
+                       (user_id, name, contact, email, date_joined) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    [user.id, name, contact, email, datetime.now()]
                 )
                 
-                # Get employee ID
-                cursor.execute("SELECT employee_id FROM payroll_Employee WHERE user_id = %s", [user.id])
-                employee_id = cursor.fetchone()[0]
-                payroll = Payroll.objects.create(
-                    employee_id=employee_id,
-                    allowances=0  # Default allowances can be set to 0 or any other value
+                # The trigger will automatically:
+                # 1. Create the payroll record
+                # 2. Create deduction and bonus records
+                # 3. Set up HR role/department if needed
+                
+                # Update the last_login field for the user
+                cursor.execute(
+                    "UPDATE accounts_customuser SET last_login = NOW() WHERE id = %s",
+                    [user.id]
                 )
-                payroll_id = payroll.payroll_id
-                Bonus.objects.create(
-                    Payroll_id = payroll_id,
-                    bonus_amount = 0
-                )
-                Deduction.objects.create(
-                    payroll_id = payroll_id,
-                    tax_amount = 0,
-                    other_deductions = 0
-                )
-                # Assign HR role if selected
-                if role_name == "HR":
-                    
-                    cursor.execute("SELECT role_id FROM payroll_Role WHERE role_name = 'HR'")
-                    hr_role = cursor.fetchone()
-                    if not hr_role:
-                        cursor.execute("INSERT INTO payroll_Role (role_name) VALUES ('HR')")
-                        cursor.execute("SELECT role_id FROM payroll_Role WHERE role_name = 'HR'")
-                        hr_role = cursor.fetchone()
-                    role_id = hr_role[0]
-                    
-                    # Assign HR role to employee
-                    cursor.execute(
-                        "INSERT INTO payroll_EmployeeRole (employee_id, role_id) VALUES (%s, %s)",
-                        [employee_id, role_id]
-                    )
-
-                    # Ensure HR department exists
-                    cursor.execute("SELECT department_id FROM payroll_Department WHERE department_name = 'HR'")
-                    hr_department = cursor.fetchone()
-                    if not hr_department:
-                        cursor.execute("INSERT INTO payroll_Department (department_name) VALUES ('HR')")
-                        cursor.execute("SELECT department_id FROM payroll_Department WHERE department_name = 'HR'")
-                        hr_department = cursor.fetchone()
-
-                    department_id = hr_department[0]
-                    
-                    # Update Employee table with HR department
-                    cursor.execute(
-                        "UPDATE payroll_Employee SET department_id = %s WHERE employee_id = %s",
-                        [department_id, employee_id]
-                    )
-            messages.success(request, 'Registered Successfully! You can now log in.')
+            
+            messages.success(request, 'Registration successful! You can now log in.')
             login(request, user)
             return redirect('login')
-
+        else:
+            messages.error(request, 'Registration failed. Please fix the errors below.')
     else:
-        messages.error(request, 'Registration Failed! Please try again.')
         form = CustomUserCreationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
+
 
 from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt

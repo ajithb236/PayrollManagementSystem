@@ -24,5 +24,4 @@ urlpatterns = [
     path('', views.login_view, name='login'),  # Redirect to login page
     path('employee/', include('employee.urls')),  # Employee features
     path('hr/', include('hr.urls')),  # HR/Admin features
-    # path('hr/', include('hr.urls')),  # HR/Admin features
 ]
