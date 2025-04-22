@@ -11,5 +11,7 @@ urlpatterns = [
     path('metrics_dashboard/', views.hr_metrics_dashboard, name='hr_metrics_dashboard'),
     path('attendance_details/', views.attendance_details, name='attendance_details'),
     path('approve_leave/', views.approve_leave_requests, name='approve_leave_requests'),
+    path('salary_disbursement/', views.salary_disbursement, name='salary_disbursement'),
+    path('payment_history/', views.payment_history, name='payment_history'),
     # Other HR URLs
 ]

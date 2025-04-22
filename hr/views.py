@@ -9,13 +9,6 @@ from django.contrib import messages
 from django.http import HttpResponse
 from datetime import datetime, timedelta
 import calendar
-@login_required
-def hr_dashboard(request):
-    if not request.user.is_authenticated or request.user.role != 'HR':
-        messages.error(request,"Not an HR")
-        return redirect('login')  # Ensure only HR users can access this page
-    return render(request, 'hr/dashboard.html')
-
 
 @login_required
 def update_payscales(request):
@@ -267,96 +260,6 @@ def assign_employee(request):
         'departments': departments,
         'jobs': jobs
     })
-
-@login_required
-def manage_employees(request):
-    # Ensure only HR users can access this page
-    if not request.user.is_authenticated or request.user.role != 'HR':
-        messages.error(request, "Access denied. Only HR users can access this page.")
-        return redirect('login')
-
-    # Fetch all departments except the HR department for the dropdown
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT department_id, department_name
-            FROM payroll_department
-            WHERE department_name != 'HR'
-            """
-        )
-        departments = cursor.fetchall()
-
-    employees = []
-    selected_department = None
-
-    # If a department is selected, fetch employees in that department
-    if request.method == 'POST' and 'department_id' in request.POST:
-        selected_department = request.POST.get('department_id')
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT e.employee_id, e.name, e.contact, e.email, j.job_title, d.department_name,
-                       COALESCE(b.bonus_amount, 0) AS bonus
-                FROM payroll_employee e
-                LEFT JOIN payroll_job j ON e.job_id = j.job_id
-                LEFT JOIN payroll_department d ON e.department_id = d.department_id
-                LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
-                LEFT JOIN payroll_bonus b ON b.payroll_id = p.payroll_id
-                WHERE e.department_id = %s
-                """, [selected_department]
-            )
-            employees = cursor.fetchall()
-
-    # Handle reassignment or bonus update
-    if request.method == 'POST' and 'employee_id' in request.POST:
-        employee_id = request.POST.get('employee_id')
-        new_department_id = request.POST.get('new_department_id')
-        new_job_id = request.POST.get('new_job_id')
-        bonus = request.POST.get('bonus')
-
-        # Update employee's department, job, and bonus
-        with connection.cursor() as cursor:
-            if new_department_id:
-                cursor.execute(
-                    "UPDATE payroll_employee SET department_id = %s WHERE employee_id = %s",
-                    [new_department_id, employee_id]
-                )
-            if new_job_id:
-                cursor.execute(
-                    "UPDATE payroll_employee SET job_id = %s WHERE employee_id = %s",
-                    [new_job_id, employee_id]
-                )
-            if bonus:
-                # Fetch the payroll ID for the employee
-                cursor.execute(
-                    "SELECT payroll_id FROM payroll_payroll WHERE employee_id = %s",
-                    [employee_id]
-                )
-                payroll = cursor.fetchone()
-                if payroll:
-                    payroll_id = payroll[0]
-                    cursor.execute(
-                        """
-                        INSERT INTO payroll_bonus (payroll_id, bonus_amount)
-                        VALUES (%s, %s)
-                        ON DUPLICATE KEY UPDATE bonus_amount = %s
-                        """, [payroll_id, bonus, bonus]
-                    )
-        messages.success(request, "Employee details updated successfully!")
-        return redirect('manage_employees')
-
-    # Fetch all jobs for the dropdown
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT job_id, job_title FROM payroll_job")
-        jobs = cursor.fetchall()
-
-    return render(request, 'hr/manage_employee.html', {
-        'departments': departments,
-        'employees': employees,
-        'jobs': jobs,
-        'selected_department': selected_department
-    })
-
 
 @login_required
 def update_payscales(request):
@@ -1269,69 +1172,6 @@ def manage_employees1(request):
             messages.error(request, f"Error assigning manager: {str(e)}")
             selected_department = department_id
 
-    # Handle employee deletion
-    if request.method == 'POST' and request.POST.get('action') == 'delete_employee':
-        employee_id = request.POST.get('employee_id')
-        try:
-            # Find the user_id if it exists for this employee
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT user_id FROM payroll_employee WHERE employee_id = %s", [employee_id])
-                user_result = cursor.fetchone()
-                user_id = user_result[0] if user_result and user_result[0] else None
-
-            # Start a transaction to ensure all-or-nothing deletion
-            with connection.cursor() as cursor:
-                # Begin transaction
-                cursor.execute("START TRANSACTION")
-                
-                # 1. Delete bonus records (depending on payroll)
-                cursor.execute("""
-                    DELETE b FROM payroll_bonus b
-                    JOIN payroll_payroll p ON b.payroll_id = p.payroll_id
-                    WHERE p.employee_id = %s
-                """, [employee_id])
-                
-                # 2. Delete deduction records (depending on payroll)
-                cursor.execute("""
-                    DELETE d FROM payroll_deduction d
-                    JOIN payroll_payroll p ON d.payroll_id = p.payroll_id
-                    WHERE p.employee_id = %s
-                """, [employee_id])
-                
-                # 3. Delete payroll records
-                cursor.execute("DELETE FROM payroll_payroll WHERE employee_id = %s", [employee_id])
-                
-                # 4. Delete attendance records
-                cursor.execute("DELETE FROM payroll_attendance WHERE employee_id = %s", [employee_id])
-                
-                # 5. Delete leave records
-                cursor.execute("DELETE FROM payroll_leave WHERE employee_id = %s", [employee_id])
-                
-                # 6. Unset as manager if they are a manager
-                cursor.execute("UPDATE payroll_department SET manager_id = NULL WHERE manager_id = %s", [employee_id])
-                
-                # 7. Delete employee record
-                cursor.execute("DELETE FROM payroll_employee WHERE employee_id = %s", [employee_id])
-                
-                # 8. Delete user account if it exists
-                if user_id:
-                    cursor.execute("DELETE FROM accounts_customuser WHERE id = %s", [user_id])
-                
-                # Commit the transaction
-                cursor.execute("COMMIT")
-                
-            messages.success(request, "Employee has been fired and all records deleted successfully.")
-            
-            # If a department was previously selected, maintain that selection
-            if 'department_id' in request.POST:
-                selected_department = request.POST.get('department_id')
-            
-        except Exception as e:
-            # Rollback transaction on error
-            with connection.cursor() as cursor:
-                cursor.execute("ROLLBACK")
-            messages.error(request, f"Error firing employee: {str(e)}")
-
     # If a department is selected, fetch employees in that department
     if request.method == 'POST' and 'department_id' in request.POST and request.POST.get('action') == 'view_employees':
         selected_department = request.POST.get('department_id')
@@ -1419,3 +1259,259 @@ def manage_employees1(request):
         'selected_department': selected_department,
         'current_manager': current_manager
     })
+
+
+@login_required
+def hr_dashboard(request):
+    # Get stats for dashboard
+    with connection.cursor() as cursor:
+        # Total employees
+        cursor.execute("SELECT COUNT(*) FROM payroll_employee")
+        total_employees = cursor.fetchone()[0]
+        
+        # Departments
+        cursor.execute("SELECT COUNT(*) FROM payroll_department")
+        departments = cursor.fetchone()[0]
+        
+        # Pending leave requests
+        cursor.execute("SELECT COUNT(*) FROM payroll_leave WHERE status = 'Pending'")
+        pending_leave = cursor.fetchone()[0]
+        
+        # Pending payments
+
+       
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM payroll_payroll p
+            LEFT JOIN payroll_payment pm ON p.payroll_id = pm.payroll_id
+            WHERE pm.payment_id IS NULL
+        """)
+       
+        pending_payments = cursor.fetchone()[0]
+            
+    context = {
+        'stats': {
+            'total_employees': total_employees,
+            'departments': departments,
+            'pending_leave': pending_leave,
+            'pending_payments': pending_payments,
+        },
+        
+    }
+    
+    return render(request, 'hr/dashboard.html', context)
+
+
+
+
+def generate_bank_account(employee_id, payroll_id, payment_id):#helper function
+    """Generate a 12-digit bank account number from IDs"""
+    # Combine the IDs and pad with zeros to make it 12 digits
+    combined = f"{employee_id}{payroll_id}{payment_id}"
+    padded = combined.zfill(12)  # Ensure it's 12 digits with leading zeros
+    
+    # If longer than 12 digits (unlikely but possible with large IDs), truncate
+    return padded[-12:]
+
+@login_required
+def salary_disbursement(request):
+    if request.method == 'POST':
+        payroll_id = request.POST.get('payroll_id')
+        payment_mode = request.POST.get('payment_mode')
+
+        bonus_amount = request.POST.get('bonus_amount', 0)
+        
+        # Validate required fields
+        if not (payroll_id and payment_mode):
+            messages.error(request, "Payment mode required.")
+            return redirect('salary_disbursement')
+            
+        try:
+            with connection.cursor() as cursor:
+                # Check if payment already exists
+                cursor.execute(
+                    "SELECT payment_id FROM payroll_payment WHERE payroll_id = %s",
+                    [payroll_id]
+                )
+                if cursor.fetchone():
+                    messages.error(request, "Payment for this payroll has already been processed.")
+                    return redirect('salary_disbursement')
+                
+                # Get employee_id for the payroll
+                cursor.execute(
+                    "SELECT employee_id FROM payroll_payroll WHERE payroll_id = %s",
+                    [payroll_id]
+                )
+                employee_id = cursor.fetchone()[0]
+                
+                # Update bonus if provided
+                if bonus_amount:
+                    # Check if bonus record exists
+                    cursor.execute(
+                        "SELECT bonus_id FROM payroll_bonus WHERE payroll_id = %s",
+                        [payroll_id]
+                    )
+                    bonus_record = cursor.fetchone()
+                    
+                    if bonus_record:
+                        # Update existing bonus
+                        cursor.execute(
+                            "UPDATE payroll_bonus SET bonus_amount = %s WHERE payroll_id = %s",
+                            [bonus_amount, payroll_id]
+                        )
+                    else:
+                        # Create new bonus record
+                        cursor.execute(
+                            "INSERT INTO payroll_bonus (payroll_id, bonus_amount) VALUES (%s, %s)",
+                            [payroll_id, bonus_amount]
+                        )
+                
+                # Create payment record
+                cursor.execute(
+                    "INSERT INTO payroll_payment (payroll_id) VALUES (%s)",
+                    [payroll_id]
+                )
+                
+                # Get the newly created payment_id
+                payment_id = cursor.lastrowid
+                
+                # Generate bank account number
+                transaction_id= bank_account = generate_bank_account(employee_id, payroll_id, payment_id)
+                
+                # Create payment detail record
+                cursor.execute(
+                    """
+                    INSERT INTO payroll_paymentdetail 
+                    (payment_id, payment_mode, transaction_id, bank_account) 
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    [payment_id, payment_mode, transaction_id, bank_account]
+                )
+                
+                messages.success(request, f"Payment processed successfully. Bank account: {bank_account}")
+                return redirect('salary_disbursement')
+                
+        except Exception as e:
+            messages.error(request, f"Error processing payment: {str(e)}")
+            return redirect('salary_disbursement')
+    
+    # Get pending payrolls
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 
+                distinct p.payroll_id, 
+                e.employee_id,
+                e.name, 
+                d.department_name,
+                j.job_title,
+                jsr.salary_range,
+                p.allowances,
+                COALESCE(b.bonus_amount, 0) as bonus_amount,
+                COALESCE(deduct.tax_amount, 0) as tax_amount,
+                COALESCE(deduct.other_deductions, 0) as other_deductions
+            FROM payroll_payroll p
+            JOIN payroll_employee e ON p.employee_id = e.employee_id
+            JOIN payroll_job j ON e.job_id = j.job_id
+            JOIN payroll_department d ON e.department_id = d.department_id
+            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
+            LEFT JOIN payroll_deduction deduct ON p.payroll_id = deduct.payroll_id
+            LEFT JOIN payroll_payment pm ON p.payroll_id = pm.payroll_id
+            WHERE pm.payment_id IS NULL
+            ORDER BY p.payroll_id DESC
+            """
+        )
+        pending_payrolls = cursor.fetchall()
+    
+    # Format payroll data for display
+    payrolls = []
+    for record in pending_payrolls:
+        payroll_id = record[0]
+        employee_id = record[1]
+        employee_name = record[2]
+        department = record[3]
+        job_title = record[4]
+        base_salary = float(record[5]) if record[5] else 0
+        allowances = float(record[6]) if record[6] else 0
+        bonus = float(record[7]) if record[7] else 0
+        tax = float(record[8]) if record[8] else 0
+        other_deductions = float(record[9]) if record[9] else 0
+        
+        # Calculate gross and net pay
+        gross_pay = base_salary + allowances + bonus
+        total_deductions = tax + other_deductions
+        net_pay = gross_pay - total_deductions
+        
+        payrolls.append({
+            'payroll_id': payroll_id,
+            'employee_id': employee_id,
+            'employee_name': employee_name,
+            'department': department,
+            'job_title': job_title,
+            'base_salary': base_salary,
+            'allowances': allowances,
+            'bonus': bonus,
+            'tax': tax,
+            'other_deductions': other_deductions,
+            'gross_pay': gross_pay,
+            'net_pay': net_pay
+        })
+    
+    return render(request, 'hr/salary_disbursement.html', {'payrolls': payrolls})
+
+@login_required
+def payment_history(request):
+    # Get processed payments
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 
+                distinct pm.payment_id,
+                p.payroll_id, 
+                e.name, 
+                d.department_name,
+                jsr.salary_range + p.allowances + COALESCE(b.bonus_amount, 0) - 
+                    COALESCE(deduct.tax_amount, 0) - COALESCE(deduct.other_deductions, 0) as net_pay,
+                pd.payment_mode,
+                pd.transaction_id,
+                pd.bank_account
+            FROM payroll_payment pm
+            JOIN payroll_payroll p ON pm.payroll_id = p.payroll_id
+            JOIN payroll_employee e ON p.employee_id = e.employee_id
+            JOIN payroll_job j ON e.job_id = j.job_id
+            JOIN payroll_department d ON e.department_id = d.department_id
+            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
+            LEFT JOIN payroll_deduction deduct ON p.payroll_id = deduct.payroll_id
+            LEFT JOIN payroll_paymentdetail pd ON pm.payment_id = pd.payment_id
+            ORDER BY pm.payment_id DESC
+            """
+        )
+        payment_records = cursor.fetchall()
+    
+    # Format payment data
+    payments = []
+    for record in payment_records:
+        payment_id = record[0]
+        payroll_id = record[1]
+        employee_name = record[2]
+        department = record[3]
+        net_pay = float(record[4]) if record[4] else 0
+        payment_mode = record[5]
+        transaction_id = record[6]
+        bank_account = record[7]
+        
+        payments.append({
+            'payment_id': payment_id,
+            'payroll_id': payroll_id,
+            'employee_name': employee_name,
+            'department': department,
+            'net_pay': net_pay,
+            'payment_mode': payment_mode,
+            'transaction_id': transaction_id,
+            'bank_account': bank_account
+        })
+    
+    return render(request, 'hr/payment_history.html', {'payments': payments})
+

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                <h2>Salary Disbursement</h2>
+                <a href="{% url 'hr_dashboard' %}" class="btn btn-outline-primary">
+                    Back to Dashboard
+                </a>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Pending Payments ({{ payrolls|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if payrolls %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>EMPID</th>
+                                        <th>EMPNAME</th>
+                                        <th>DEPARTMENT</th>
+                                        <th class="text-end">BASE SALARY</th>
+                                        <th class="text-end">ALLOWANCES</th>
+                                        <th class="text-end">BONUS</th>
+                                        <th class="text-end">DEDUCTIONS</th>
+                                        <th class="text-end">TOTAL</th>
+                                        <th class="text-center">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payroll in payrolls %}
+                                        <tr>
+                                            <td>#{{ payroll.employee_id }}</td>
+                                            <td>{{ payroll.employee_name }}</td>
+                                            <td>{{ payroll.department }}</td>
+                                            <td class="text-end">₹{{ payroll.base_salary|floatformat:2 }}</td>
+                                            <td class="text-end">₹{{ payroll.allowances|floatformat:2 }}</td>
+                                            <td class="text-end">₹{{ payroll.bonus|floatformat:2 }}</td>
+                                            <td class="text-end">₹{{ payroll.tax|floatformat:2 }}</td>
+                                            <td class="text-end">₹{{ payroll.net_pay|floatformat:2 }}</td>
+                                            <td class="text-center">
+                                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#processPayment{{ payroll.payroll_id }}">
+                                                    Process
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No pending salary payments to process.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modals (Outside the table) -->
+{% for payroll in payrolls %}
+<div class="modal fade" id="processPayment{{ payroll.payroll_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'salary_disbursement' %}">
+                {% csrf_token %}
+                <input type="hidden" name="payroll_id" value="{{ payroll.payroll_id }}">
+                <input type="hidden" id="base{{ payroll.payroll_id }}" value="{{ payroll.base_salary }}">
+                <input type="hidden" id="allowances{{ payroll.payroll_id }}" value="{{ payroll.allowances }}">
+                <input type="hidden" id="tax{{ payroll.payroll_id }}" value="{{ payroll.tax }}">
+                <input type="hidden" id="deductions{{ payroll.payroll_id }}" value="{{ payroll.other_deductions }}">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title">Process Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <p><strong>{{ payroll.employee_name }}</strong> - {{ payroll.department }}</p>
+                    
+                    <table class="table table-bordered">
+                        <tr>
+                            <td>Base Salary</td>
+                            <td class="text-end">₹{{ payroll.base_salary|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Allowances</td>
+                            <td class="text-end">₹{{ payroll.allowances|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Bonus</td>
+                            <td>
+                                <div class="input-group">
+                                    <span class="input-group-text">₹</span>
+                                    <input type="number" class="form-control" name="bonus_amount" id="bonus{{ payroll.payroll_id }}"
+                                        value="{{ payroll.bonus }}" min="0" step="0.01" 
+                                        oninput="recalculateTotal({{ payroll.payroll_id }})">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tax</td>
+                            <td class="text-end">₹{{ payroll.tax|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Other Deductions</td>
+                            <td class="text-end">₹{{ payroll.other_deductions|floatformat:2 }}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <th>Net Pay</th>
+                            <th class="text-end" id="newTotal{{ payroll.payroll_id }}">₹{{ payroll.net_pay|floatformat:2 }}</th>
+                        </tr>
+                    </table>
+                    
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Payment Mode</label>
+                        <select class="form-select" name="payment_mode" required>
+                            <option value="">Select Payment Mode</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Check">Check</option>
+                            <option value="UPI">UPI</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Process Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    function recalculateTotal(payrollId) {
+        // Get values
+        const bonusInput = document.getElementById('bonus' + payrollId);
+        const newTotalElement = document.getElementById('newTotal' + payrollId);
+        
+        const baseSalary = parseFloat(document.getElementById('base' + payrollId).value) || 0;
+        const allowances = parseFloat(document.getElementById('allowances' + payrollId).value) || 0;
+        const tax = parseFloat(document.getElementById('tax' + payrollId).value) || 0;
+        const otherDeductions = parseFloat(document.getElementById('deductions' + payrollId).value) || 0;
+        const newBonus = parseFloat(bonusInput.value) || 0;
+        
+        // Calculate new total
+        const newTotal = baseSalary + allowances + newBonus - tax - otherDeductions;
+        
+        // Update the display
+        newTotalElement.textContent = '₹' + newTotal.toFixed(2);
+    }
+</script>
+{% endblock %}

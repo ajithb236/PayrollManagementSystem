@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar (same as other pages) -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'employee_dashboard' %}" class="text-decoration-none text-dark">Employee Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'salary' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-rupee"></i> View Salary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'transaction_history' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Transaction History
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'request_leave' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Request Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'leave_balance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Track Leave Balance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'clock_overtime' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Clock Overtime Hours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Leave Balance - {{ current_year }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Employee Information</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Name</th>
+                                    <td>{{ employee.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Department</th>
+                                    <td>{{ employee.department }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Job Title</th>
+                                    <td>{{ employee.job_title }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        {% for leave in leave_balances %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header {% if leave.type == 'Vacation' %}bg-success{% elif leave.type == 'Sick' %}bg-danger{% else %}bg-info{% endif %} text-white">
+                                    <h5 class="mb-0">{{ leave.type }} Leave</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        <h1 class="display-4">{{ leave.remaining }}</h1>
+                                        <p class="text-muted">Days Remaining</p>
+                                    </div>
+                                    
+                                    <div class="progress mb-3" style="height: 10px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ leave.percentage }}%;" 
+                                            aria-valuenow="{{ leave.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td>Total Allocated</td>
+                                            <td class="text-end">{{ leave.allocated }} days</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Used</td>
+                                            <td class="text-end">{{ leave.used }} days</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pending Approval</td>
+                                            <td class="text-end">{{ leave.pending }} days</td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <div class="d-grid mt-3">
+                                        <a href="{% url 'request_leave' %}" class="btn btn-outline-primary">Request Leave</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

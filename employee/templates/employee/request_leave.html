@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'employee_dashboard' %}" class="text-decoration-none text-dark">Employee Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'salary' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-rupee"></i> View Salary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'transaction_history' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Transaction History
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'request_leave' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Request Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'leave_balance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Track Leave Balance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'clock_overtime' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Clock Overtime Hours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Request Leave</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Leave Request Form -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">New Leave Request</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="leave_type" class="form-label">Leave Type</label>
+                                    <select class="form-select" id="leave_type" name="leave_type" required>
+                                        <option value="" selected disabled>Select Leave Type</option>
+                                        {% for leave_type in leave_types %}
+                                            <option value="{{ leave_type }}">{{ leave_type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="start_date" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="end_date" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">Submit Leave Request</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Leave History -->
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Leave History</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if leave_records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Leave Type</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Days</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for leave in leave_records %}
+                                                <tr>
+                                                    <td>#{{ leave.leave_id }}</td>
+                                                    <td>{{ leave.leave_type }}</td>
+                                                    <td>{{ leave.start_date|date:"M d, Y" }}</td>
+                                                    <td>{{ leave.end_date|date:"M d, Y" }}</td>
+                                                    <td>{{ leave.days }} day{{ leave.days|pluralize }}</td>
+                                                    <td>
+                                                        <span class="badge {% if leave.status == 'Approved' %}bg-success{% elif leave.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                            {{ leave.status }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info m-3 mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    No leave records found. Your leave history will appear here once you submit requests.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+<script>
+    // Add simple validation for date fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        
+        // Set minimum date to today
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        
+        startDateInput.setAttribute('min', todayStr);
+        
+        // Update end date min value when start date changes
+        startDateInput.addEventListener('change', function() {
+            endDateInput.setAttribute('min', this.value);
+            if (endDateInput.value && endDateInput.value < this.value) {
+                endDateInput.value = this.value;
+            }
+        });
+    });
+</script>
+{% endblock %}

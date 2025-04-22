@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                <h2>Payment History</h2>
+                <a href="{% url 'hr_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Processed Payments</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if payments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Payment ID</th>
+                                        <th>Payroll ID</th>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Amount</th>
+                                        <th>Payment Mode</th>
+                                        <th>Transaction ID</th>
+                                        <th>Bank Account</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in payments %}
+                                        <tr>
+                                            <td>#{{ payment.payment_id }}</td>
+                                            <td>#{{ payment.payroll_id }}</td>
+                                            <td>{{ payment.employee_name }}</td>
+                                            <td>{{ payment.department }}</td>
+                                            <td>₹{{ payment.net_pay|floatformat:2 }}</td>
+                                            <td>{{ payment.payment_mode }}</td>
+                                            <td>{{ payment.transaction_id }}</td>
+                                            <td>{{ payment.bank_account }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info m-3 mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No payment records found.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+{% endblock %}

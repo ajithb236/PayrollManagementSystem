@@ -9,4 +9,7 @@ urlpatterns = [
     path('salary/', views.view_salary, name='salary'),  # Salary URL
     path('attendance/', views.attendance_tracker, name='attendance'),  # Attendance URL
     path("clock_overtime/", views.clock_overtime, name="clock_overtime"),  # Clock Overtime URL
+    path("transactions/",views.transaction_history,name="transaction_history"),
+    path("request_leave/",views.request_leave,name="request_leave"),
+    path("leave_balance/",views.leave_balance,name="leave_balance"),
 ]

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'employee_dashboard' %}" class="text-decoration-none text-dark">Employee Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'salary' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-rupee"></i> View Salary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'transaction_history' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Transaction History
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'request_leave' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Request Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'leave_balance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Track Leave Balance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'clock_overtime' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Clock Overtime Hours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Transaction History</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Employee Information</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Name</th>
+                                    <td>{{ data.employee_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Department</th>
+                                    <td>{{ data.department }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Job Title</th>
+                                    <td>{{ data.job_title }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Base Salary</th>
+                                    <td>₹{{ data.base_salary|floatformat:2 }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Summary</h5>
+                                    <div class="row mt-3">
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="text-primary">Earnings</h6>
+                                            <h5>₹{{ data.total_earnings|floatformat:2 }}</h5>
+                                            <small class="text-muted">Allowances: ₹{{ data.total_allowances|floatformat:2 }}</small><br>
+                                            <small class="text-muted">Bonuses: ₹{{ data.total_bonus|floatformat:2 }}</small>
+                                        </div>
+                                        <div class="col-md-4 border-end">
+                                            <h6 class="text-danger">Deductions</h6>
+                                            <h5>₹{{ data.total_deductions|floatformat:2 }}</h5>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="text-success">Net Pay</h6>
+                                            <h5>₹{{ data.total_net_pay|floatformat:2 }}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Transaction Details</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if data.transactions %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Allowances</th>
+                                                <th>Bonus</th>
+                                                <th>Total Earnings</th>
+                                                <th>Deductions</th>
+                                                <th>Net Pay</th>
+                                                <th>Transaction ID</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for transaction in data.transactions %}
+                                            <tr>
+                                                <td>#{{ transaction.payroll_id }}</td>
+                                                <td>₹{{ transaction.allowances|floatformat:2 }}</td>
+                                                <td>₹{{ transaction.bonus|floatformat:2 }}</td>
+                                                <td>₹{{ transaction.total_earnings|floatformat:2 }}</td>
+                                                <td>₹{{ transaction.total_deductions|floatformat:2 }}</td>
+                                                <td><strong>₹{{ transaction.net_pay|floatformat:2 }}</strong></td>
+                                                <td>{{ transaction.transaction_id }}</td>
+                                                <td>
+                                                    <span class="badge {% if transaction.status == 'Completed' %}bg-success{% else %}bg-warning{% endif %}">
+                                                        {{ transaction.status }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info m-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    No transaction records found. Your payment history will appear here once processed.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+{% endblock %}
