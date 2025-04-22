@@ -73,3 +73,6 @@ coverage.xml
 *.pytest_cache/
 .tox/
 .pytest_cache/
+
+!PLSQL/
+!*.sql

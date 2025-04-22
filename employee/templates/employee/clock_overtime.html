@@ -1,18 +1,84 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="text-center">Clock Overtime Hours</h1>
-    <form method="POST" class="mt-4">
-        {% csrf_token %}
-        <div class="mb-3">
-            <label for="overtime_hours" class="form-label">Overtime Hours</label>
-            <input type="number" class="form-control" id="overtime_hours" name="overtime_hours" placeholder="Enter overtime hours" required>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'employee_dashboard' %}" class="text-decoration-none text-dark">Employee Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'salary' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-rupee"></i> View Salary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-gift"></i> View Bonus
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-percent"></i> Tax Deductions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Request Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'error_page' %}" class="nav-link text-dark">
+                        <i class="bi bi-clock-history"></i> Track Leave Balance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'clock_overtime' %}" class="nav-link text-dark active">
+                        <i class="bi bi-clock-history"></i> Clock Overtime Hours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
-    <div class="text-center mt-4">
-        <a href="{% url 'employee_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Clock Overtime Hours</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="overtime_hours" class="form-label">Overtime Hours</label>
+                            <input type="number" class="form-control" id="overtime_hours" name="overtime_hours" placeholder="Enter overtime hours" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 {% endblock %}

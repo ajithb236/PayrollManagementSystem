@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'hr_dashboard' %}" class="text-decoration-none text-dark">HR Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-plus"></i> Assign Job Roles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'update_payscales' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-exchange"></i> Update Pay Scales
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-people"></i> Manage Employees
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'generate_reports' %}" class="nav-link text-dark">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Generate Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_metrics_dashboard' %}" class="nav-link text-dark">
+                        <i class="bi bi-speedometer2"></i> HR Metrics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Approve Leave Requests
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance_details' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance Details
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card shadow mt-4 mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">HR Metrics Dashboard</h4>
+                    <span class="badge bg-light text-primary">April 2025</span>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Summary Stats Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary bg-opacity-10 border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Total Employees</h6>
+                                    <h2>{{ metrics.total_employees|default:"0" }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success bg-opacity-10 border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Base Salary</h6>
+                                    <h2>₹{{ metrics.finance.total_base_salary|floatformat:0 }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info bg-opacity-10 border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Total Allowances</h6>
+                                    <h2>₹{{ metrics.finance.total_allowances|floatformat:0 }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning bg-opacity-10 border-0 h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Total Bonuses</h6>
+                                    <h2>₹{{ metrics.finance.total_bonuses|floatformat:0 }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Financial Overview -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0 text-primary">Financial Breakdown</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="progress mb-3" style="height: 25px;">
+                                        <!-- Fixed progress bars - they should be siblings, not nested -->
+                                        <div class="progress-bar bg-primary" 
+                                            style="width: {% widthratio metrics.finance.total_base_salary|default:0 metrics.finance.total_cost|default:1 100 %}%">
+                                            Base ({% widthratio metrics.finance.total_base_salary|default:0 metrics.finance.total_cost|default:1 100 %}%)
+                                        </div>
+                                    </div>
+                                    <div class="progress mb-3" style="height: 25px;">
+                                        <div class="progress-bar bg-success" 
+                                            style="width: {% widthratio metrics.finance.total_allowances|default:0 metrics.finance.total_cost|default:1 100 %}%">
+                                            Allowances ({% widthratio metrics.finance.total_allowances|default:0 metrics.finance.total_cost|default:1 100 %}%)
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar bg-warning" 
+                                            style="width: {% widthratio metrics.finance.total_bonuses|default:0 metrics.finance.total_cost|default:1 100 %}%">
+                                            Bonuses ({% widthratio metrics.finance.total_bonuses|default:0 metrics.finance.total_cost|default:1 100 %}%)
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-dark text-white h-100">
+                                        <div class="card-body text-center">
+                                            <h6 class="text-light opacity-75 mb-3">Total Monthly Cost</h6>
+                                            <h2>₹{{ metrics.finance.total_cost|floatformat:0 }}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <!-- Department Headcount Chart -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0 text-success">Department Headcount</h5>
+                                </div>
+                                <div class="card-body p-3">
+                                    <canvas id="departmentChart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Salary Distribution Table -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0 text-warning">Salary Distribution</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Department</th>
+                                                    <th>Avg</th>
+                                                    <th>Min</th>
+                                                    <th>Max</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for dept in metrics.salary_metrics %}
+                                                <tr>
+                                                    <td>{{ dept.department }}</td>
+                                                    <td>₹{{ dept.avg_salary|floatformat:0 }}</td>
+                                                    <td>₹{{ dept.min_salary|floatformat:0 }}</td>
+                                                    <td>₹{{ dept.max_salary|floatformat:0 }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center">No salary data available</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Attendance/Overtime Table -->
+                        <div class="col-md-8 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0 text-danger">Overtime Statistics (30 Days)</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Department</th>
+                                                    <th>Employees</th>
+                                                    <th>Avg Hours</th>
+                                                    <th>Total OT</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for dept in metrics.attendance_metrics %}
+                                                <tr>
+                                                    <td>{{ dept.department }}</td>
+                                                    <td>{{ dept.employees_with_attendance }}</td>
+                                                    <td>{{ dept.avg_hours_worked }}</td>
+                                                    <td>{{ dept.total_overtime_hours }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center">No overtime data available</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Joiners -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0 text-primary">Recent Joiners</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        {% for employee in metrics.recent_joiners %}
+                                        <li class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">{{ employee.name }}</h6>
+                                                <small class="text-muted">{{ employee.date_joined|date:"d M Y" }}</small>
+                                            </div>
+                                            <p class="mb-0 text-primary">{{ employee.job_title }}</p>
+                                            <small class="text-muted">{{ employee.department }}</small>
+                                        </li>
+                                        {% empty %}
+                                        <li class="list-group-item text-center text-muted py-4">
+                                            No recent joiners
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leave Statistics -->
+                        <div class="col-md-12 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0 text-secondary">Leave Statistics (90 Days)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="leaveChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Initialize charts when document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Department Chart
+        const deptCtx = document.getElementById('departmentChart').getContext('2d');
+        const departmentChart = new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ metrics.department_labels|safe }},
+                datasets: [{
+                    label: 'Employee Count',
+                    data: {{ metrics.department_data|safe }},
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Leave Chart
+        const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+        const leaveChart = new Chart(leaveCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ metrics.leave_labels|safe }},
+                datasets: [{
+                    label: 'Leave Count',
+                    data: {{ metrics.leave_count|safe }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Total Days',
+                    data: {{ metrics.leave_days|safe }},
+                    type: 'line',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: true,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Leave Count'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Days'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

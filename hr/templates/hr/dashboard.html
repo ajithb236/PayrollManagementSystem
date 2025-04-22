@@ -5,11 +5,11 @@
     <div class="row">
         <!-- Sidebar -->
         <div class="col-md-3 bg-light vh-100 p-3">
-            <h4 class="text-center mt-3">HR Menu</h4>
+            <h4 class="text-center mt-3"><a href="{% url 'hr_dashboard' %}" class="text-decoration-none text-dark">HR Menu</a></h4>
             <hr>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark">
+                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark active">
                         <i class="bi bi-person-plus"></i> Assign Job Roles
                     </a>
                 </li>
@@ -29,12 +29,17 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'hr_metrics_dashboard' %}" class="nav-link text-dark">
+                        <i class="bi bi-speedometer2"></i> HR Metrics
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
                         <i class="bi bi-calendar-check"></i> Approve Leave Requests
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                    <a href="{% url 'attendance_details' %}" class="nav-link text-dark">
                         <i class="bi bi-clipboard-check"></i> Track Attendance
                     </a>
                 </li>
@@ -54,11 +59,13 @@
         <!-- Main Content -->
         <div class="col-md-9">
             <div class="card mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">HR Dashboard</h4>
+                </div>
                 <div class="card-body">
                     <h1 class="text-center">Welcome, {{ request.user.username }}!</h1>
                     <p class="text-center">What would you like to do today?</p>
                     <hr>
-                    <h4>HR Dashboard</h4>
                     <p>Use the menu on the left to manage employees, assign roles, update pay scales, and more.</p>
                 </div>
             </div>

@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'hr_dashboard' %}" class="text-decoration-none text-dark">HR Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark active">
+                        <i class="bi bi-person-plus"></i> Assign Job Roles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'update_payscales' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-exchange"></i> Update Pay Scales
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-people"></i> Manage Employees
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'generate_reports' %}" class="nav-link text-dark">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Generate Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_metrics_dashboard' %}" class="nav-link text-dark">
+                        <i class="bi bi-speedometer2"></i> HR Metrics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-calendar-check"></i> Approve Leave Requests
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance_details' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Track Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card shadow mt-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Attendance Records</h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Filters -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Filters</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="GET" action="{% url 'attendance_details' %}" id="filterForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="department_id" class="form-label">Department</label>
+                                        <select class="form-select" id="department_id" name="department_id">
+                                            <option value="">All Departments</option>
+                                            {% for dept in departments %}
+                                            <option value="{{ dept.0 }}" {% if selected_department == dept.0|stringformat:"s" %}selected{% endif %}>
+                                                {{ dept.1 }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="employee_id" class="form-label">Employee</label>
+                                        <select class="form-select" id="employee_id" name="employee_id" {% if not employees %}disabled{% endif %}>
+                                            <option value="">All Employees</option>
+                                            {% for emp in employees %}
+                                            <option value="{{ emp.0 }}" {% if selected_employee == emp.0|stringformat:"s" %}selected{% endif %}>
+                                                {{ emp.1 }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="start_date" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="end_date" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                                    </div>
+                                </div>
+                                <div class="mt-3 d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary px-4">
+                                        <i class="bi bi-search me-1"></i> Apply Filters
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Employee Details if a specific employee is selected -->
+                    {% if employee_details %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Employee Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Name:</strong> {{ employee_details.0 }}</p>
+                                    <p><strong>Department:</strong> {{ employee_details.1 }}</p>
+                                    <p><strong>Position:</strong> {{ employee_details.2 }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Date Joined:</strong> {{ employee_details.3 }}</p>
+                                    <p><strong>Email:</strong> {{ employee_details.4 }}</p>
+                                    <p><strong>Contact:</strong> {{ employee_details.5 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Attendance Records -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Attendance Records</h5>
+                            <small>{{ date_range }}</small>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm" id="attendanceTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Employee</th>
+                                            <th>Date</th>
+                                            <th>Day</th>
+                                            <th>Hours</th>
+                                            <th>OT</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in attendance_records %}
+                                        <tr>
+                                            <td>{{ row.0 }}</td>
+                                            <td>
+                                                <a href="{% url 'attendance_details' %}?employee_id={{ row.1 }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                                                    {{ row.2 }}
+                                                </a>
+                                            </td>
+                                            <td>{{ row.4 }}</td>
+                                            <td>{{ row.5 }}</td>
+                                            <td>{{ row.6|default:"0" }}</td>
+                                            <td>{{ row.7|default:"0" }}</td>
+                                            <td>
+                                                {% if row.9 == "Present" %}
+                                                <span class="badge bg-success">Present</span>
+                                                {% elif row.9 %}
+                                                <span class="badge bg-warning">{{ row.9 }}</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Absent</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-3">No attendance records found</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple script to submit form when department changes
+    document.addEventListener('DOMContentLoaded', function() {
+        const departmentSelect = document.getElementById('department_id');
+        
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', function() {
+                document.getElementById('filterForm').submit();
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 bg-light vh-100 p-3">
+            <h4 class="text-center mt-3"><a href="{% url 'hr_dashboard' %}" class="text-decoration-none text-dark">HR Menu</a></h4>
+            <hr>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'assign_employee' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-plus"></i> Assign Job Roles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'update_payscales' %}" class="nav-link text-dark">
+                        <i class="bi bi-currency-exchange"></i> Update Pay Scales
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'manage_employees' %}" class="nav-link text-dark">
+                        <i class="bi bi-people"></i> Manage Employees
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'generate_reports' %}" class="nav-link text-dark">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Generate Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_metrics_dashboard' %}" class="nav-link text-dark">
+                        <i class="bi bi-speedometer2"></i> HR Metrics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'approve_leave_requests' %}" class="nav-link bg-primary text-white">
+                        <i class="bi bi-calendar-check"></i> Approve Leave Requests
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'attendance_details' %}" class="nav-link text-dark">
+                        <i class="bi bi-clipboard-check"></i> Attendance Details
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'hr_profile' %}" class="nav-link text-dark">
+                        <i class="bi bi-person-circle"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="card shadow mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Leave Request Management</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Tabs for different leave statuses -->
+                    <ul class="nav nav-tabs mb-4" id="leavesTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" 
+                                type="button" role="tab" aria-selected="true">
+                                Pending Requests <span class="badge bg-danger rounded-pill ms-1">{{ pending_requests|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" 
+                                type="button" role="tab" aria-selected="false">
+                                Recently Approved
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" 
+                                type="button" role="tab" aria-selected="false">
+                                Recently Rejected
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="leavesTabsContent">
+                        <!-- Pending Requests Tab -->
+                        <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                            {% if pending_requests %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Employee</th>
+                                                <th>Department</th>
+                                                <th>Leave Type</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Days</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for request in pending_requests %}
+                                            <tr>
+                                                <td>{{ request.2 }}</td>
+                                                <td>{{ request.3 }}</td>
+                                                <td><span class="badge bg-info">{{ request.4 }}</span></td>
+                                                <td>{{ request.5 }}</td>
+                                                <td>{{ request.6 }}</td>
+                                                <td>{{ request.7 }}</td>
+                                                <td>
+                                                    <div class="d-flex">
+                                                        <form method="post" class="me-2">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="leave_id" value="{{ request.0 }}">
+                                                            <input type="hidden" name="action" value="Approved">
+                                                            <button type="submit" class="btn btn-sm btn-success" 
+                                                                onclick="return confirm('Approve leave request for {{ request.2 }}?')">
+                                                                <i class="bi bi-check-lg me-1"></i> Approve
+                                                            </button>
+                                                        </form>
+                                                        <form method="post">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="leave_id" value="{{ request.0 }}">
+                                                            <input type="hidden" name="action" value="Rejected">
+                                                            <button type="submit" class="btn btn-sm btn-danger"
+                                                                onclick="return confirm('Reject leave request for {{ request.2 }}?')">
+                                                                <i class="bi bi-x-lg me-1"></i> Reject
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i> No pending leave requests found.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Approved Requests Tab -->
+                        <div class="tab-pane fade" id="approved" role="tabpanel">
+                            {% if approved_requests %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Employee</th>
+                                                <th>Department</th>
+                                                <th>Leave Type</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Days</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for request in approved_requests %}
+                                            <tr>
+                                                <td>{{ request.2 }}</td>
+                                                <td>{{ request.3 }}</td>
+                                                <td><span class="badge bg-info">{{ request.4 }}</span></td>
+                                                <td>{{ request.5 }}</td>
+                                                <td>{{ request.6 }}</td>
+                                                <td>{{ request.7 }}</td>
+                                                <td><span class="badge bg-success">Approved</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i> No approved leave requests found.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Rejected Requests Tab -->
+                        <div class="tab-pane fade" id="rejected" role="tabpanel">
+                            {% if rejected_requests %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Employee</th>
+                                                <th>Department</th>
+                                                <th>Leave Type</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Days</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for request in rejected_requests %}
+                                            <tr>
+                                                <td>{{ request.2 }}</td>
+                                                <td>{{ request.3 }}</td>
+                                                <td><span class="badge bg-info">{{ request.4 }}</span></td>
+                                                <td>{{ request.5 }}</td>
+                                                <td>{{ request.6 }}</td>
+                                                <td>{{ request.7 }}</td>
+                                                <td><span class="badge bg-danger">Rejected</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i> No rejected leave requests found.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

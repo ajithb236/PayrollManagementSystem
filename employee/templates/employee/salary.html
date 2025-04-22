@@ -5,7 +5,7 @@
     <div class="row">
         <!-- Sidebar -->
         <div class="col-md-3 bg-light vh-100 p-3">
-            <h4 class="text-center mt-3">Employee Menu</h4>
+            <h4 class="text-center mt-3"><a href="{% url 'employee_dashboard' %}" class="text-decoration-none text-dark">Employee Menu</a></h4>
             <hr>
             <ul class="nav flex-column">
                 <li class="nav-item">
@@ -63,6 +63,7 @@
                     <h4 class="mb-0">Salary Slip - {{ salary.month }}</h4>
                 </div>
                 <div class="card-body">
+                    <!-- Existing content remains unchanged -->
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <h5>Employee Details</h5>
