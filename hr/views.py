@@ -1534,6 +1534,7 @@ def salary_disbursement(request):
         total_deductions = tax + other_deductions
         net_pay = gross_pay - total_deductions
         
+        
         payrolls.append({
             'payroll_id': payroll_id,
             'employee_id': employee_id,
