@@ -11,17 +11,6 @@ from datetime import datetime, timedelta
 import calendar
 
 @login_required
-def update_payscales(request):
-    if request.method == 'POST':
-        job_id = request.POST.get('job_id')
-        salary_range = request.POST.get('salary_range')
-        job = get_object_or_404(Job, pk=job_id)
-        job.salary_range = salary_range
-        job.save()
-        return redirect('update_payscales')
-    jobs = Job.objects.all()
-    return render(request, 'hr/update_payscales.html', {'jobs': jobs})
-@login_required
 def hr_profile(request):
     user_id = request.user.id
 
@@ -1303,7 +1292,6 @@ def hr_dashboard(request):
 
 
 
-
 def generate_bank_account(employee_id, payroll_id, payment_id):#helper function
     """Generate a 12-digit bank account number from IDs"""
     # Combine the IDs and pad with zeros to make it 12 digits
@@ -1313,12 +1301,71 @@ def generate_bank_account(employee_id, payroll_id, payment_id):#helper function
     # If longer than 12 digits (unlikely but possible with large IDs), truncate
     return padded[-12:]
 
+
 @login_required
-def salary_disbursement(request):
+def payment_history(request):
+    # Get processed payments
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 
+                distinct pm.payment_id,
+                p.payroll_id, 
+                e.name, 
+                d.department_name,
+                jsr.salary_range + p.allowances + COALESCE(b.bonus_amount, 0) - 
+                    COALESCE(deduct.tax_amount, 0) - COALESCE(deduct.other_deductions, 0) as net_pay,
+                pd.payment_mode,
+                pd.transaction_id,
+                pd.bank_account
+            FROM payroll_payment pm
+            JOIN payroll_payroll p ON pm.payroll_id = p.payroll_id
+            JOIN payroll_employee e ON p.employee_id = e.employee_id
+            JOIN payroll_job j ON e.job_id = j.job_id
+            JOIN payroll_department d ON e.department_id = d.department_id
+            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
+            LEFT JOIN payroll_deduction deduct ON p.payroll_id = deduct.payroll_id
+            LEFT JOIN payroll_paymentdetail pd ON pm.payment_id = pd.payment_id
+            ORDER BY pm.payment_id DESC
+            """
+        )
+        payment_records = cursor.fetchall()
+    
+    # Format payment data
+    payments = []
+    for record in payment_records:
+        payment_id = record[0]
+        payroll_id = record[1]
+        employee_name = record[2]
+        department = record[3]
+        net_pay = float(record[4]) if record[4] else 0
+        payment_mode = record[5]
+        transaction_id = record[6]
+        bank_account = record[7]
+        
+        payments.append({
+            'payment_id': payment_id,
+            'payroll_id': payroll_id,
+            'employee_name': employee_name,
+            'department': department,
+            'net_pay': net_pay,
+            'payment_mode': payment_mode,
+            'transaction_id': transaction_id,
+            'bank_account': bank_account
+        })
+    
+    return render(request, 'hr/payment_history.html', {'payments': payments})
+
+@login_required
+def salary_disbursement1(request):
+    # Get current month and year for calculating overtime
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
     if request.method == 'POST':
         payroll_id = request.POST.get('payroll_id')
         payment_mode = request.POST.get('payment_mode')
-
         bonus_amount = request.POST.get('bonus_amount', 0)
         
         # Validate required fields
@@ -1337,12 +1384,56 @@ def salary_disbursement(request):
                     messages.error(request, "Payment for this payroll has already been processed.")
                     return redirect('salary_disbursement')
                 
-                # Get employee_id for the payroll
+                # Get employee_id and base salary for the payroll
                 cursor.execute(
-                    "SELECT employee_id FROM payroll_payroll WHERE payroll_id = %s",
+                    """
+                    SELECT p.employee_id, jsr.salary_range, p.allowances 
+                    FROM payroll_payroll p
+                    JOIN payroll_employee e ON p.employee_id = e.employee_id
+                    JOIN payroll_job j ON e.job_id = j.job_id
+                    JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+                    WHERE p.payroll_id = %s
+                    """,
                     [payroll_id]
                 )
-                employee_id = cursor.fetchone()[0]
+                payroll_data = cursor.fetchone()
+                employee_id = payroll_data[0]
+                base_salary = float(payroll_data[1]) if payroll_data[1] else 0
+                current_allowances = float(payroll_data[2]) if payroll_data[2] else 0
+                
+                # Calculate overtime hours for current month
+                cursor.execute(
+                    """
+                    SELECT SUM(overtime_hours)
+                    FROM payroll_attendance
+                    WHERE employee_id = %s
+                    AND MONTH(date) = %s AND YEAR(date) = %s
+                    """, [employee_id, current_month, current_year]
+                )
+                overtime_result = cursor.fetchone()
+                overtime_hours = float(overtime_result[0]) if overtime_result and overtime_result[0] else 0
+                
+                # Calculate overtime pay
+                hourly_rate = base_salary / 160
+                overtime_pay = overtime_hours * hourly_rate * 2
+                
+                # Calculate standard components
+                hra = base_salary * 0.40  # 40% of base salary
+                da = base_salary * 0.10    # 10% of base salary
+                ta = 3200  # Standard transport allowance
+                
+                # Calculate total allowances WITH overtime included
+                calculated_total_allowances = hra + da + ta + overtime_pay
+                
+                # Update allowances if they've changed
+                if abs(calculated_total_allowances - current_allowances) > 0.01:
+                    cursor.execute(
+                        """
+                        UPDATE payroll_payroll
+                        SET allowances = %s
+                        WHERE payroll_id = %s
+                        """, [calculated_total_allowances, payroll_id]
+                    )
                 
                 # Update bonus if provided
                 if bonus_amount:
@@ -1376,7 +1467,7 @@ def salary_disbursement(request):
                 payment_id = cursor.lastrowid
                 
                 # Generate bank account number
-                transaction_id= bank_account = generate_bank_account(employee_id, payroll_id, payment_id)
+                transaction_id = bank_account = generate_bank_account(employee_id, payroll_id, payment_id)
                 
                 # Create payment detail record
                 cursor.execute(
@@ -1459,59 +1550,3 @@ def salary_disbursement(request):
         })
     
     return render(request, 'hr/salary_disbursement.html', {'payrolls': payrolls})
-
-@login_required
-def payment_history(request):
-    # Get processed payments
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT 
-                distinct pm.payment_id,
-                p.payroll_id, 
-                e.name, 
-                d.department_name,
-                jsr.salary_range + p.allowances + COALESCE(b.bonus_amount, 0) - 
-                    COALESCE(deduct.tax_amount, 0) - COALESCE(deduct.other_deductions, 0) as net_pay,
-                pd.payment_mode,
-                pd.transaction_id,
-                pd.bank_account
-            FROM payroll_payment pm
-            JOIN payroll_payroll p ON pm.payroll_id = p.payroll_id
-            JOIN payroll_employee e ON p.employee_id = e.employee_id
-            JOIN payroll_job j ON e.job_id = j.job_id
-            JOIN payroll_department d ON e.department_id = d.department_id
-            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
-            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
-            LEFT JOIN payroll_deduction deduct ON p.payroll_id = deduct.payroll_id
-            LEFT JOIN payroll_paymentdetail pd ON pm.payment_id = pd.payment_id
-            ORDER BY pm.payment_id DESC
-            """
-        )
-        payment_records = cursor.fetchall()
-    
-    # Format payment data
-    payments = []
-    for record in payment_records:
-        payment_id = record[0]
-        payroll_id = record[1]
-        employee_name = record[2]
-        department = record[3]
-        net_pay = float(record[4]) if record[4] else 0
-        payment_mode = record[5]
-        transaction_id = record[6]
-        bank_account = record[7]
-        
-        payments.append({
-            'payment_id': payment_id,
-            'payroll_id': payroll_id,
-            'employee_name': employee_name,
-            'department': department,
-            'net_pay': net_pay,
-            'payment_mode': payment_mode,
-            'transaction_id': transaction_id,
-            'bank_account': bank_account
-        })
-    
-    return render(request, 'hr/payment_history.html', {'payments': payments})
-
