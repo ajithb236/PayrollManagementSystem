@@ -1184,7 +1184,7 @@ def manage_employees(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT e.employee_id, e.name, e.contact, e.email, j.job_title, d.department_name,
+                SELECT distinct e.employee_id, e.name, e.contact, e.email, j.job_title, d.department_name,
                        COALESCE(b.bonus_amount, 0) AS bonus,
                        CASE WHEN d.manager_id = e.employee_id THEN 'Yes' ELSE 'No' END as is_manager
                 FROM payroll_employee e

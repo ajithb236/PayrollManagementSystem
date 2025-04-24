@@ -195,127 +195,7 @@ def clock_overtime(request):
         messages.success(request, f"Overtime hours updated to {overtime_hours} for today.")
         return redirect('employee_dashboard')
     return render(request, 'employee/clock_overtime.html')
-@login_required
-def view_salary(request):
-    user_id = request.user.id
-    
-    # Get current month and year for filtering
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-    
-    with connection.cursor() as cursor:
-        # Fetch employee basic details and base salary
-        cursor.execute(
-            """
-            SELECT e.employee_id, e.name, j.job_title, jsr.salary_range, p.payroll_id, p.allowances
-            FROM payroll_employee e
-            LEFT JOIN payroll_job j ON e.job_id = j.job_id
-            LEFT JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
-            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
-            WHERE e.user_id = %s
-            """, [user_id]
-        )
-        employee_basic = cursor.fetchone()
-        
-        if not employee_basic:
-            messages.error(request, "Salary details not found. Please contact HR.")
-            return redirect('employee_dashboard')
-        
-        employee_id = employee_basic[0]
-        payroll_id = employee_basic[4]
-        base_salary = float(employee_basic[3]) if employee_basic[3] else 0
-        
-        # Fetch deductions
-        cursor.execute(
-            """
-            SELECT tax_amount, other_deductions
-            FROM payroll_deduction
-            WHERE payroll_id = %s
-            """, [payroll_id]
-        )
-        deductions = cursor.fetchone()
-        tax_amount = float(deductions[0]) if deductions and deductions[0] else 0
-        other_deductions = float(deductions[1]) if deductions and deductions[1] else 0
-        
-        # Fetch bonus
-        cursor.execute(
-            """
-            SELECT bonus_amount
-            FROM payroll_bonus
-            WHERE payroll_id = %s
-            """, [payroll_id]
-        )
-        bonus_record = cursor.fetchone()
-        bonus_amount = float(bonus_record[0]) if bonus_record else 0
-        
-        # Calculate overtime pay (for current month)
-        cursor.execute(
-            """
-            SELECT SUM(overtime_hours)
-            FROM payroll_attendance
-            WHERE employee_id = %s
-            AND MONTH(date) = %s AND YEAR(date) = %s
-            """, [employee_id, current_month, current_year]
-        )
-        overtime_result = cursor.fetchone()
-        overtime_hours = float(overtime_result[0]) if overtime_result and overtime_result[0] else 0
-        
-        # Calculate hourly rate (assuming 160 working hours per month)
-        hourly_rate = base_salary / 160
-        overtime_pay = overtime_hours * hourly_rate * 2  # Double rate for overtime
-        
-      
-        total_allowances = float(employee_basic[5]) if employee_basic[5] else 0
-        
-        # Calculate standard components
-        hra = base_salary * 0.40  # 40% of base salary
-        da = base_salary * 0.10    # 10% of base salary
-        ta = 3200  # Standard transport allowance
-        special_allowance = total_allowances - (hra + da + ta)
-        special_allowance = max(0, special_allowance)  # Ensure it's not negative
-        
-        # Calculate EPF (12% of basic salary)
-        epf = base_salary * 0.12
-        
-        # Professional Tax
-        prof_tax = 200
-        
-        # Calculate gross and net salary
-        gross_salary = base_salary + total_allowances + bonus_amount + overtime_pay
-        total_deductions = tax_amount
-        net_salary = gross_salary - total_deductions
-        
 
-    salary_data = {
-        'employee_name': employee_basic[1],
-        'job_title': employee_basic[2],
-        'month': datetime.now().strftime('%B %Y'),
-        'base_salary': round(base_salary, 2),
-        'allowances': {
-            'hra': round(hra, 2),
-            'da': round(da, 2),
-            'ta': round(ta, 2),
-            'special': round(special_allowance, 2),
-            'total': round(total_allowances, 2)
-        },
-        'overtime': {
-            'hours': overtime_hours,
-            'rate': round(hourly_rate * 2, 2),
-            'pay': round(overtime_pay, 2)
-        },
-        'bonus': round(bonus_amount, 2),
-        'deductions': {
-            'epf': round(epf, 2),
-            'tax': round(tax_amount-epf-prof_tax, 2),
-            'prof_tax': prof_tax,
-            'other': round(other_deductions, 2),
-            'total': round(tax_amount , 2)  # Include prof_tax in total
-        },
-        'gross_salary': round(gross_salary, 2),
-        'net_salary': round(net_salary, 2),
-    }
-    
-    return render(request, 'employee/salary.html', {'salary': salary_data})
 @login_required
 def transaction_history(request):
     user_id = request.user.id
@@ -623,4 +503,276 @@ def logout(request):
     logout(request)
     return redirect("login")
 
+@login_required
+def view_salary(request):
+    user_id = request.user.id
+    
+    # Get current month and year for filtering
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    with connection.cursor() as cursor:
+        # Fetch employee basic details and base salary
+        cursor.execute(
+            """
+            SELECT e.employee_id, e.name, j.job_title, jsr.salary_range, p.payroll_id, p.allowances
+            FROM payroll_employee e
+            LEFT JOIN payroll_job j ON e.job_id = j.job_id
+            LEFT JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
+            WHERE e.user_id = %s
+            """, [user_id]
+        )
+        employee_basic = cursor.fetchone()
+        
+        if not employee_basic:
+            messages.error(request, "Salary details not found. Please contact HR.")
+            return redirect('employee_dashboard')
+        
+        employee_id = employee_basic[0]
+        payroll_id = employee_basic[4]
+        base_salary = float(employee_basic[3]) if employee_basic[3] else 0
+        
+        # Calculate overtime pay (for current month) - Moved up to include in allowances
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND MONTH(date) = %s AND YEAR(date) = %s
+            """, [employee_id, current_month, current_year]
+        )
+        overtime_result = cursor.fetchone()
+        overtime_hours = float(overtime_result[0]) if overtime_result and overtime_result[0] else 0
+        
+        # Calculate hourly rate and overtime pay
+        hourly_rate = base_salary / 160
+        overtime_pay = overtime_hours * hourly_rate * 2  # Double rate for overtime
+        
+        # Calculate standard components
+        hra = base_salary * 0.40  # 40% of base salary
+        da = base_salary * 0.10    # 10% of base salary
+        ta = 3200  # Standard transport allowance
+        
+        # Calculate total allowances WITH overtime pay included
+        calculated_total_allowances = hra + da + ta + overtime_pay
+        
+        # Get current allowances from database
+        current_allowances = float(employee_basic[5]) if employee_basic[5] else 0
+        
+        # Update allowances in the database if they've changed
+        if payroll_id and abs(calculated_total_allowances - current_allowances) > 0.01:
+            cursor.execute(
+                """
+                UPDATE payroll_payroll
+                SET allowances = %s
+                WHERE payroll_id = %s
+                """, [calculated_total_allowances, payroll_id]
+            )
+            # Update the value for subsequent calculations
+            total_allowances = calculated_total_allowances
+        else:
+            total_allowances = current_allowances
+        
+        # Fetch deductions
+        cursor.execute(
+            """
+            SELECT tax_amount, other_deductions
+            FROM payroll_deduction
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        deductions = cursor.fetchone()
+        tax_amount = float(deductions[0]) if deductions and deductions[0] else 0
+        other_deductions = float(deductions[1]) if deductions and deductions[1] else 0
+        
+        # Fetch bonus
+        cursor.execute(
+            """
+            SELECT bonus_amount
+            FROM payroll_bonus
+            WHERE payroll_id = %s
+            """, [payroll_id]
+        )
+        bonus_record = cursor.fetchone()
+        bonus_amount = float(bonus_record[0]) if bonus_record else 0
+        
+        # Special allowance - subtract standard components and overtime from total
+        special_allowance = total_allowances - (hra + da + ta + overtime_pay)
+        special_allowance = max(0, special_allowance)  # Ensure it's not negative
+        
+        # Calculate EPF (12% of basic salary)
+        epf = base_salary * 0.12
+        
+        # Professional Tax
+        prof_tax = 200
+        
+        # Calculate gross and net salary (now overtime is part of allowances)
+        gross_salary = base_salary + total_allowances + bonus_amount
+        total_deductions = tax_amount + other_deductions + epf + prof_tax
+        net_salary = gross_salary - total_deductions
+        
+        # Year to date calculations
+        cursor.execute(
+            """
+            SELECT SUM(overtime_hours)
+            FROM payroll_attendance
+            WHERE employee_id = %s
+            AND YEAR(date) = %s
+            """, [employee_id, current_year]
+        )
 
+
+    salary_data = {
+        'employee_name': employee_basic[1],
+        'job_title': employee_basic[2],
+        'month': datetime.now().strftime('%B %Y'),
+        'base_salary': round(base_salary, 2),
+        'allowances': {
+            'hra': round(hra, 2),
+            'da': round(da, 2),
+            'ta': round(ta, 2),
+            'overtime': round(overtime_pay, 2),  # Added overtime to allowances section
+            'special': round(special_allowance, 2),
+            'total': round(total_allowances, 2)
+        },
+        'overtime': {
+            'hours': overtime_hours,
+            'rate': round(hourly_rate * 2, 2),
+            'pay': round(overtime_pay, 2)
+        },
+        'bonus': round(bonus_amount, 2),
+        'deductions': {
+            'epf': round(epf, 2),
+            'tax': round(tax_amount, 2),
+            'prof_tax': prof_tax,
+            'other': round(other_deductions, 2),
+            'total': round(total_deductions + prof_tax, 2)  # Include prof_tax in total
+        },
+        'gross_salary': round(gross_salary, 2),
+        'net_salary': round(net_salary, 2),
+    }
+    
+    return render(request, 'employee/salary.html', {'salary': salary_data})
+@login_required
+def transaction_history1(request):
+    user_id = request.user.id
+    
+    with connection.cursor() as cursor:
+        # Get the employee_id for the logged-in user
+        cursor.execute(
+            "SELECT employee_id FROM payroll_employee WHERE user_id = %s",
+            [user_id]
+        )
+        result = cursor.fetchone()
+        if not result:
+            messages.error(request, "Employee profile not found.")
+            return redirect('employee_dashboard')
+        
+        employee_id = result[0]
+        
+        # Get employee basic info
+        cursor.execute(
+            """
+            SELECT e.name, j.job_title, d.department_name, jsr.salary_range
+            FROM payroll_employee e
+            JOIN payroll_job j ON e.job_id = j.job_id
+            JOIN payroll_department d ON e.department_id = d.department_id
+            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
+            WHERE e.employee_id = %s
+            """, [employee_id]
+        )
+        employee_info = cursor.fetchone()
+        
+        # Fetch all payment transactions for this employee - strictly using existing columns
+        cursor.execute(
+            """
+            SELECT 
+                distinct p.payroll_id,
+                p.allowances,
+                COALESCE(b.bonus_amount, 0) AS bonus_amount,
+                COALESCE(d.tax_amount, 0) AS tax_amount,
+                COALESCE(d.other_deductions, 0) AS other_deductions,
+                pm.payment_id,
+                pd.payment_mode,
+                pd.transaction_id,
+                pd.bank_account
+            FROM payroll_payroll p
+            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
+            LEFT JOIN payroll_deduction d ON p.payroll_id = d.payroll_id
+            LEFT JOIN payroll_payment pm ON p.payroll_id = pm.payroll_id
+            LEFT JOIN payroll_paymentdetail pd ON pm.payment_id = pd.payment_id
+            WHERE p.employee_id = %s
+            ORDER BY p.payroll_id DESC
+            """, [employee_id]
+        )
+        transactions = cursor.fetchall()
+    
+    # Format the transaction data for display
+    transaction_list = []
+    total_allowances = 0
+    total_bonus = 0
+    total_deductions = 0
+    base_salary = float(employee_info[3]) if employee_info and employee_info[3] else 0
+    
+    # Calculate EPF and Professional Tax
+    epf = base_salary * 0.12
+    prof_tax = 200
+    
+    for record in transactions:
+        payroll_id = record[0]
+        allowances = float(record[1]) if record[1] else 0
+        bonus_amount = float(record[2]) if record[2] else 0
+        tax_amount = float(record[3]) if record[3] else 0
+        other_deductions = float(record[4]) if record[4] else 0
+        payment_id = record[5]
+        payment_mode = record[6] if record[6] else "Not Processed"
+        transaction_id = record[7] if record[7] else "-"
+        bank_account = record[8] if record[8] else "-"
+        
+        # Fix: Calculate totals using the same logic as view_salary
+        total_earnings = base_salary + allowances + bonus_amount
+        # Fix: Deductions should include EPF and Prof Tax
+        total_deduction = tax_amount + other_deductions + epf + prof_tax
+        net_pay = total_earnings - total_deduction
+        
+        # Keep running totals
+        total_allowances += allowances
+        total_bonus += bonus_amount
+        total_deductions += total_deduction
+        
+        transaction_list.append({
+            'payroll_id': payroll_id,
+            'allowances': allowances,
+            'bonus': bonus_amount,
+            'total_earnings': total_earnings,
+            'tax': tax_amount,
+            'other_deductions': other_deductions,
+            'total_deductions': total_deduction,
+            'net_pay': net_pay,
+            'payment_id': payment_id,
+            'payment_mode': payment_mode,
+            'transaction_id': transaction_id,
+            'bank_account': bank_account,
+            'status': "Completed" if payment_mode and payment_mode != "Not Processed" else "Pending"
+        })
+    
+    # Fix: Calculate overall totals properly
+    total_earnings = (base_salary * len(transactions)) + total_allowances + total_bonus
+    total_net = total_earnings - total_deductions
+    
+    # Prepare data for the template
+    transaction_data = {
+        'employee_name': employee_info[0] if employee_info else "Employee",
+        'job_title': employee_info[1] if employee_info else "",
+        'department': employee_info[2] if employee_info else "",
+        'base_salary': float(employee_info[3]) if employee_info and employee_info[3] else 0,
+        'transactions': transaction_list,
+        'total_allowances': total_allowances,
+        'total_bonus': total_bonus,
+        'total_earnings': total_earnings,
+        'total_deductions': total_deductions,
+        'total_net_pay': total_net
+    }
+    
+    return render(request, 'employee/transaction_history.html', {'data': transaction_data})
