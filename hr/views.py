@@ -1107,7 +1107,7 @@ def approve_leave_requests(request):
 
 
 @login_required
-def manage_employees1(request):
+def manage_employees(request):
     # Ensure only HR users can access this page
     if not request.user.is_authenticated or request.user.role != 'HR':
         messages.error(request, "Access denied. Only HR users can access this page.")
@@ -1358,7 +1358,7 @@ def payment_history(request):
     return render(request, 'hr/payment_history.html', {'payments': payments})
 
 @login_required
-def salary_disbursement1(request):
+def salary_disbursement(request):
     # Get current month and year for calculating overtime
     current_month = datetime.now().month
     current_year = datetime.now().year

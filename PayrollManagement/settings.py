@@ -85,9 +85,9 @@ WSGI_APPLICATION = 'PayrollManagement.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  
-        'NAME': 'payroll_db',  
+        'NAME': 'payroll',  
         'USER': 'root',  
-        'PASSWORD': 'Admin',  # Your MySQL password
+        'PASSWORD': 'crashloops',  # Your MySQL password
         'HOST': 'localhost',  
         'PORT': '3306',  # Default MySQL port
         'OPTIONS': {
