@@ -85,7 +85,9 @@ def profile(request):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT e.name, e.contact, e.email, e.address, e.gender, e.date_of_birth,e.date_joined
+            SELECT e.employee_id, e.name, e.email, e.contact, e.address, e.gender, e.date_of_birth,
+        (SELECT j.job_title FROM payroll_job j WHERE j.job_id = e.job_id) AS job_title,
+        (SELECT d.department_name FROM payroll_department d WHERE d.department_id = e.department_id) AS department_name
             FROM payroll_employee e
             WHERE e.user_id = %s
             """, [user_id]
@@ -515,11 +517,16 @@ def view_salary(request):
         # Fetch employee basic details and base salary
         cursor.execute(
             """
-            SELECT e.employee_id, e.name, j.job_title, jsr.salary_range, p.payroll_id, p.allowances
+            SELECT 
+                e.employee_id, 
+                e.name, 
+                (SELECT j.job_title FROM payroll_job j WHERE j.job_id = e.job_id) AS job_title,
+                (SELECT jsr.salary_range 
+                FROM payroll_jobsalaryrange jsr 
+                WHERE jsr.job_id = e.job_id) AS salary_range,
+                (SELECT p.payroll_id FROM payroll_payroll p WHERE p.employee_id = e.employee_id) AS payroll_id,
+                (SELECT p.allowances FROM payroll_payroll p WHERE p.employee_id = e.employee_id) AS allowances
             FROM payroll_employee e
-            LEFT JOIN payroll_job j ON e.job_id = j.job_id
-            LEFT JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
-            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
             WHERE e.user_id = %s
             """, [user_id]
         )
@@ -609,7 +616,7 @@ def view_salary(request):
         
         # Calculate gross and net salary (now overtime is part of allowances)
         gross_salary = base_salary + total_allowances + bonus_amount
-        total_deductions = tax_amount + other_deductions + epf + prof_tax
+        total_deductions = tax_amount + other_deductions  # Assuming epf and prof tax are included in deductions due to PLSQL
         net_salary = gross_salary - total_deductions
         
         # Year to date calculations
@@ -644,10 +651,10 @@ def view_salary(request):
         'bonus': round(bonus_amount, 2),
         'deductions': {
             'epf': round(epf, 2),
-            'tax': round(tax_amount, 2),
+            'tax': round(tax_amount-epf-prof_tax, 2),
             'prof_tax': prof_tax,
             'other': round(other_deductions, 2),
-            'total': round(total_deductions + prof_tax, 2)  # Include prof_tax in total
+            'total': round(total_deductions , 2)  # Include prof_tax in total
         },
         'gross_salary': round(gross_salary, 2),
         'net_salary': round(net_salary, 2),
@@ -714,10 +721,7 @@ def transaction_history1(request):
     total_bonus = 0
     total_deductions = 0
     base_salary = float(employee_info[3]) if employee_info and employee_info[3] else 0
-    
-    # Calculate EPF and Professional Tax
-    epf = base_salary * 0.12
-    prof_tax = 200
+    #epf and prof tax are included in deductions function(PLSQL)
     
     for record in transactions:
         payroll_id = record[0]
@@ -730,10 +734,10 @@ def transaction_history1(request):
         transaction_id = record[7] if record[7] else "-"
         bank_account = record[8] if record[8] else "-"
         
-        # Fix: Calculate totals using the same logic as view_salary
+       
         total_earnings = base_salary + allowances + bonus_amount
-        # Fix: Deductions should include EPF and Prof Tax
-        total_deduction = tax_amount + other_deductions + epf + prof_tax
+       
+        total_deduction = tax_amount + other_deductions 
         net_pay = total_earnings - total_deduction
         
         # Keep running totals
@@ -757,11 +761,10 @@ def transaction_history1(request):
             'status': "Completed" if payment_mode and payment_mode != "Not Processed" else "Pending"
         })
     
-    # Fix: Calculate overall totals properly
+
     total_earnings = (base_salary * len(transactions)) + total_allowances + total_bonus
     total_net = total_earnings - total_deductions
     
-    # Prepare data for the template
     transaction_data = {
         'employee_name': employee_info[0] if employee_info else "Employee",
         'job_title': employee_info[1] if employee_info else "",

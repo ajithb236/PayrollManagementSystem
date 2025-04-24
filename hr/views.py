@@ -78,12 +78,16 @@ def hr_metrics_dashboard(request):
     # 1. Department headcount metrics
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT d.department_name, COUNT(e.employee_id) as headcount
-            FROM payroll_department d
-            LEFT JOIN payroll_employee e ON d.department_id = e.department_id
-            GROUP BY d.department_id, d.department_name
-            ORDER BY headcount DESC
-        """)
+                        SELECT 
+                            d.department_name,
+                            (SELECT COUNT(e.employee_id) 
+                            FROM payroll_employee e 
+                            WHERE e.department_id = d.department_id) as headcount
+                        FROM 
+                            payroll_department d
+                        ORDER BY 
+                            (SELECT COUNT(e.employee_id) FROM payroll_employee e WHERE e.department_id = d.department_id) DESC
+                                """)
         department_headcount = cursor.fetchall()
         metrics['department_labels'] = [row[0] for row in department_headcount]
         metrics['department_data'] = [row[1] for row in department_headcount]
@@ -157,18 +161,23 @@ def hr_metrics_dashboard(request):
     # 5. Financial overview
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT 
-                SUM(jsr.salary_range) as total_base_salary,
-                SUM(p.allowances) as total_allowances,
-                SUM(b.bonus_amount) as total_bonuses,
-                SUM(d.tax_amount) as total_tax,
-                SUM(d.other_deductions) as total_other_deductions
-            FROM payroll_employee e
-            JOIN payroll_job j ON e.job_id = j.job_id
-            JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id
-            LEFT JOIN payroll_payroll p ON e.employee_id = p.employee_id
-            LEFT JOIN payroll_bonus b ON p.payroll_id = b.payroll_id
-            LEFT JOIN payroll_deduction d ON p.payroll_id = d.payroll_id
+                SELECT 
+                    (SELECT SUM(jsr.salary_range) 
+                    FROM payroll_employee e
+                    JOIN payroll_job j ON e.job_id = j.job_id
+                    JOIN payroll_jobsalaryrange jsr ON j.job_id = jsr.job_id) as total_base_salary,
+                    
+                    (SELECT SUM(p.allowances) 
+                    FROM payroll_payroll p) as total_allowances,
+                    
+                    (SELECT SUM(b.bonus_amount) 
+                    FROM payroll_bonus b) as total_bonuses,
+                    
+                    (SELECT SUM(d.tax_amount) 
+                    FROM payroll_deduction d) as total_tax,
+                    
+                    (SELECT SUM(d.other_deductions) 
+                    FROM payroll_deduction d) as total_other_deductions
         """)
         finance = cursor.fetchone()
         metrics['finance'] = {
@@ -183,17 +192,26 @@ def hr_metrics_dashboard(request):
     # 6. Recent joiners (last 90 days)
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT 
-                e.name, 
-                d.department_name, 
-                j.job_title,
-                e.date_joined
-            FROM payroll_employee e
-            JOIN payroll_department d ON e.department_id = d.department_id
-            JOIN payroll_job j ON e.job_id = j.job_id
-            WHERE e.date_joined >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
-            ORDER BY e.date_joined DESC
-            LIMIT 5
+                    SELECT 
+                        e.name, 
+                        (SELECT d.department_name 
+                        FROM payroll_department d 
+                        WHERE d.department_id = e.department_id) as department_name,
+                        
+                        (SELECT j.job_title 
+                        FROM payroll_job j 
+                        WHERE j.job_id = e.job_id) as job_title,
+                        
+                        e.date_joined
+                    FROM 
+                        payroll_employee e
+                    WHERE 
+                        e.date_joined >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND
+                        EXISTS (SELECT 1 FROM payroll_department d WHERE d.department_id = e.department_id) AND
+                        EXISTS (SELECT 1 FROM payroll_job j WHERE j.job_id = e.job_id)
+                    ORDER BY 
+                        e.date_joined DESC
+                    LIMIT 5
         """)
         recent_joiners = cursor.fetchall()
         metrics['recent_joiners'] = []
@@ -206,6 +224,7 @@ def hr_metrics_dashboard(request):
             })
     
     return render(request, 'hr/metrics_dashboard.html', {'metrics': metrics})
+
 @login_required
 def assign_employee(request):
     # Ensure only HR users can access this page
@@ -215,13 +234,17 @@ def assign_employee(request):
     # Fetch employees with NULL department and job using raw SQL
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT e.employee_id, e.name, e.contact, e.email
-            FROM payroll_employee e
-            WHERE e.department_id IS NULL AND e.job_id IS NULL
+                SELECT e.employee_id, e.name, e.contact, e.email
+                FROM payroll_employee e
+                WHERE e.employee_id IN (
+                    SELECT employee_id 
+                    FROM payroll_employee 
+                    WHERE department_id IS NULL AND job_id IS NULL
+                )
         """)
         employees = cursor.fetchall()
 
-    # Fetch all departments and jobs for the dropdown options
+ 
     with connection.cursor() as cursor:
         cursor.execute("SELECT department_id, department_name FROM payroll_department where department_name != 'HR'")
         departments = cursor.fetchall()
@@ -234,7 +257,7 @@ def assign_employee(request):
         department_id = request.POST.get('department_id')
         job_id = request.POST.get('job_id')
 
-        # Update the employee's department and job using raw SQL
+        
         with connection.cursor() as cursor:
             cursor.execute("""
                 UPDATE payroll_employee
@@ -565,22 +588,15 @@ def generate_excel(report_data, report_type):
 def generate_csv(report_data, report_type):
     """Generate CSV version of the report"""
     import csv
-    
-    # Create the HttpResponse with CSV header
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{report_type}_report.csv"'
     
-    # Create CSV writer
+
     writer = csv.writer(response)
-    
-    # Write headers
     writer.writerow([column['name'] for column in report_data['columns']])
-    
-    # Write data rows
     for row in report_data['data']:
         writer.writerow(row)
-    
-    # Write totals row if exists
+
     if 'totals' in report_data:
         totals_row = ['Totals', '', ''] + report_data['totals']
         writer.writerow(totals_row)
@@ -793,7 +809,7 @@ def calculate_payroll_totals(data):
     if not data:
         return [0, 0, 0, 0, 0, 0, 0]
     
-    # Initialize totals (we don't sum department, employee name, and job title)
+   
     base_salary_total = 0
     allowances_total = 0
     bonus_total = 0
@@ -804,7 +820,7 @@ def calculate_payroll_totals(data):
     
     # Sum each column
     for row in data:
-        # Index 3 is base_salary, 4 is allowances, 5 is bonus, etc.
+ 
         base_salary_total += float(row[3] or 0)
         allowances_total += float(row[4] or 0)
         bonus_total += float(row[5] or 0)
@@ -813,7 +829,7 @@ def calculate_payroll_totals(data):
         deductions_total += float(row[8] or 0)
         net_pay_total += float(row[9] or 0)
     
-    # Return totals as a list in the same order as columns
+   
     return [
         round(base_salary_total, 2),
         round(allowances_total, 2),
@@ -827,22 +843,22 @@ def calculate_payroll_totals(data):
 
 @login_required
 def attendance_details(request):
-    # Ensure only HR users can access this page
+
     if not request.user.is_authenticated or request.user.role != 'HR':
         messages.error(request, "Access denied. Only HR users can access this page.")
         return redirect('login')
     
-    # Initialize variables
+
     departments = []
     employees = []
     attendance_records = []
     employee_details = None
     
-    # Get filter parameters
+
     department_id = request.GET.get('department_id', '')
     employee_id = request.GET.get('employee_id', '')
     
-    # Date range (default to current month)
+
     today = datetime.today()
     start_date = request.GET.get('start_date', (today.replace(day=1)).strftime('%Y-%m-%d'))
     
@@ -853,7 +869,7 @@ def attendance_details(request):
         last_day = calendar.monthrange(today.year, today.month)[1]
         end_date = (today.replace(day=last_day)).strftime('%Y-%m-%d')
     
-    # Fetch all departments for filter dropdown
+
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT department_id, department_name
@@ -861,8 +877,7 @@ def attendance_details(request):
             ORDER BY department_name
         """)
         departments = cursor.fetchall()
-    
-    # If department selected, fetch employees in that department
+
     if department_id:
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -873,15 +888,14 @@ def attendance_details(request):
             """, [department_id])
             employees = cursor.fetchall()
     
-    # Build query conditions based on filters
+
     conditions = []
     params = [start_date, end_date]
     
     if employee_id:
-        conditions.append("e.employee_id = %s")  # Fixed: Use e.employee_id instead of a.employee_id
+        conditions.append("e.employee_id = %s") 
         params.append(employee_id)
-        
-        # Get employee details if specific employee selected
+     
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT 
@@ -921,7 +935,7 @@ def attendance_details(request):
                 if hours_sample:
                     print(f"Sample hours_worked values: {hours_sample}")
         
-        # Fetch attendance records with filters applied - Fixed status calculation
+      
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT 
@@ -953,9 +967,9 @@ def attendance_details(request):
             """, params)
             attendance_records = cursor.fetchall()
             
-            # Debug info
+           
             if not attendance_records and employee_id:
-                # Check if we have any attendance records for this employee
+                
                 cursor.execute("""
                     SELECT COUNT(*) FROM payroll_attendance 
                     WHERE employee_id = %s
@@ -984,17 +998,16 @@ def attendance_details(request):
 
 @login_required
 def approve_leave_requests(request):
-    # Ensure only HR users can access this page
     if not request.user.is_authenticated or request.user.role != 'HR':
         messages.error(request, "Access denied. Only HR users can access this page.")
         return redirect('login')
     
-    # Initialize variables
+
     pending_requests = []
     approved_requests = []
     rejected_requests = []
     
-    # Handle approval/rejection action
+  
     if request.method == 'POST':
         leave_id = request.POST.get('leave_id')
         action = request.POST.get('action')
@@ -1002,7 +1015,6 @@ def approve_leave_requests(request):
         if leave_id and action in ['Approved', 'Rejected']:
             try:
                 with connection.cursor() as cursor:
-                    # Get leave details before updating
                     cursor.execute("""
                         SELECT employee_id, leave_type, start_date, end_date
                         FROM payroll_leave
@@ -1108,12 +1120,12 @@ def approve_leave_requests(request):
 
 @login_required
 def manage_employees(request):
-    # Ensure only HR users can access this page
+
     if not request.user.is_authenticated or request.user.role != 'HR':
         messages.error(request, "Access denied. Only HR users can access this page.")
         return redirect('login')
 
-    # Fetch all departments except the HR department for the dropdown
+   
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -1128,20 +1140,19 @@ def manage_employees(request):
     selected_department = None
     current_manager = None
     
-    # Handle manager assignment
+
     if request.method == 'POST' and request.POST.get('action') == 'assign_manager':
         employee_id = request.POST.get('employee_id')
         department_id = request.POST.get('department_id')
         
         try:
-            # Assign employee as department manager
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     "UPDATE payroll_department SET manager_id = %s WHERE department_id = %s",
                     [employee_id, department_id]
                 )
-            
-            # Get department and employee name for success message
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT department_name FROM payroll_department WHERE department_id = %s",
@@ -1161,12 +1172,11 @@ def manage_employees(request):
             messages.error(request, f"Error assigning manager: {str(e)}")
             selected_department = department_id
 
-    # If a department is selected, fetch employees in that department
     if request.method == 'POST' and 'department_id' in request.POST and request.POST.get('action') == 'view_employees':
         selected_department = request.POST.get('department_id')
     
     if selected_department:
-        # Get current manager for the selected department
+
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -1179,8 +1189,7 @@ def manage_employees(request):
             manager_info = cursor.fetchone()
             if manager_info and manager_info[0]:
                 current_manager = {"id": manager_info[0], "name": manager_info[1]}
-        
-        # Get employees in the department
+
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -1198,14 +1207,12 @@ def manage_employees(request):
             )
             employees = cursor.fetchall()
 
-    # Handle reassignment or bonus update
     if request.method == 'POST' and request.POST.get('action') == 'update_employee':
         employee_id = request.POST.get('employee_id')
         new_department_id = request.POST.get('new_department_id')
         new_job_id = request.POST.get('new_job_id')
         bonus = request.POST.get('bonus')
 
-        # Update employee's department, job, and bonus
         with connection.cursor() as cursor:
             if new_department_id:
                 cursor.execute(
@@ -1218,7 +1225,7 @@ def manage_employees(request):
                     [new_job_id, employee_id]
                 )
             if bonus:
-                # Fetch the payroll ID for the employee
+               
                 cursor.execute(
                     "SELECT payroll_id FROM payroll_payroll WHERE employee_id = %s",
                     [employee_id]
@@ -1236,7 +1243,7 @@ def manage_employees(request):
         messages.success(request, "Employee details updated successfully!")
         selected_department = request.POST.get('department_id', selected_department)
 
-    # Fetch all jobs for the dropdown
+   
     with connection.cursor() as cursor:
         cursor.execute("SELECT job_id, job_title FROM payroll_job")
         jobs = cursor.fetchall()
@@ -1272,8 +1279,11 @@ def hr_dashboard(request):
         cursor.execute("""
             SELECT COUNT(*) 
             FROM payroll_payroll p
-            LEFT JOIN payroll_payment pm ON p.payroll_id = pm.payroll_id
-            WHERE pm.payment_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 
+                FROM payroll_payment pm 
+                WHERE pm.payroll_id = p.payroll_id
+            )
         """)
        
         pending_payments = cursor.fetchone()[0]
@@ -1294,17 +1304,14 @@ def hr_dashboard(request):
 
 def generate_bank_account(employee_id, payroll_id, payment_id):#helper function
     """Generate a 12-digit bank account number from IDs"""
-    # Combine the IDs and pad with zeros to make it 12 digits
     combined = f"{employee_id}{payroll_id}{payment_id}"
     padded = combined.zfill(12)  # Ensure it's 12 digits with leading zeros
     
-    # If longer than 12 digits (unlikely but possible with large IDs), truncate
     return padded[-12:]
 
 
 @login_required
 def payment_history(request):
-    # Get processed payments
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -1422,10 +1429,10 @@ def salary_disbursement(request):
                 da = base_salary * 0.10    # 10% of base salary
                 ta = 3200  # Standard transport allowance
                 
-                # Calculate total allowances WITH overtime included
+          
                 calculated_total_allowances = hra + da + ta + overtime_pay
                 
-                # Update allowances if they've changed
+               
                 if abs(calculated_total_allowances - current_allowances) > 0.01:
                     cursor.execute(
                         """
@@ -1434,10 +1441,7 @@ def salary_disbursement(request):
                         WHERE payroll_id = %s
                         """, [calculated_total_allowances, payroll_id]
                     )
-                
-                # Update bonus if provided
                 if bonus_amount:
-                    # Check if bonus record exists
                     cursor.execute(
                         "SELECT bonus_id FROM payroll_bonus WHERE payroll_id = %s",
                         [payroll_id]
@@ -1445,31 +1449,27 @@ def salary_disbursement(request):
                     bonus_record = cursor.fetchone()
                     
                     if bonus_record:
-                        # Update existing bonus
+
                         cursor.execute(
                             "UPDATE payroll_bonus SET bonus_amount = %s WHERE payroll_id = %s",
                             [bonus_amount, payroll_id]
                         )
                     else:
-                        # Create new bonus record
                         cursor.execute(
                             "INSERT INTO payroll_bonus (payroll_id, bonus_amount) VALUES (%s, %s)",
                             [payroll_id, bonus_amount]
                         )
                 
-                # Create payment record
                 cursor.execute(
                     "INSERT INTO payroll_payment (payroll_id) VALUES (%s)",
                     [payroll_id]
                 )
                 
-                # Get the newly created payment_id
+              
                 payment_id = cursor.lastrowid
-                
-                # Generate bank account number
+
                 transaction_id = bank_account = generate_bank_account(employee_id, payroll_id, payment_id)
                 
-                # Create payment detail record
                 cursor.execute(
                     """
                     INSERT INTO payroll_paymentdetail 
