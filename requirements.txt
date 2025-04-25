@@ -1,3 +1,9 @@
-django
-mysqlclient
-python
+Django==4.2.7
+pymysql==1.1.0
+mysqlclient==2.2.0
+python-decouple==3.8
+django-widget-tweaks==1.4.12
+django-extensions==3.2.3
+reportlab==4.0.4  # For PDF generation
+openpyxl==3.1.2   # For Excel export
+pandas==2.0.3     # For data manipulation and CSV export
