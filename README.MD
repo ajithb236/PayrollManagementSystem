@@ -95,7 +95,7 @@ PayrollManagement/
 ├── employee/                    # Employee module
 │   ├── views.py                 # Employee views
 │   ├── urls.py                  # Employee URL patterns
-│   └── templates/               # Employee templates
+│   └── templates/employee/               # Employee templates
 │       ├── dashboard.html       # Employee dashboard
 │       ├── profile.html         # Profile management
 │       ├── salary.html          # Salary details view
@@ -107,7 +107,7 @@ PayrollManagement/
 ├── hr/                          # HR module
 │   ├── views.py                 # HR functionality
 │   ├── urls.py                  # HR URL patterns
-│   └── templates/               # HR templates
+│   └── templates/hr/              # HR templates
 │       ├── dashboard.html       # HR dashboard
 │       ├── assign_employee.html # Role assignment
 │       ├── update_payscales.html # Salary management
@@ -150,7 +150,7 @@ PayrollManagement/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/PayrollManagement.git
+   git clone https://github.com/ajithb236/PayrollManagement.git
    cd PayrollManagement
    ```
 
@@ -188,24 +188,7 @@ PayrollManagement/
    ```
 
 5. **Update settings.py to use environment variables**
-   Ensure your settings.py uses the python-decouple package to read from config.env:
-   ```python
-   from decouple import config
-   
-   SECRET_KEY = config('SECRET_KEY')
-   DEBUG = config('DEBUG', default=False, cast=bool)
-   
-   DATABASES = {
-       'default': {
-           'ENGINE': config('DB_ENGINE'),
-           'NAME': config('DB_NAME'),
-           'USER': config('DB_USER'),
-           'PASSWORD': config('DB_PASSWORD'),
-           'HOST': config('DB_HOST'),
-           'PORT': config('DB_PORT'),
-       }
-   }
-   ```
+   Ensure your settings.py uses the python-decouple package to read from `config.env`
 
 6. **Run database migrations**
    ```bash
